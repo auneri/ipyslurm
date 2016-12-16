@@ -59,6 +59,12 @@ class Slurm(magic.Magics):
             return
         self.execute(cell.format(**self.shell.user_ns))
 
+    @magic.cell_magic
+    def sbatch(self, line='', cell=None):
+        if not self.loggedin():
+            return
+        self.execute('sbatch {} --wrap="{}"'.format(line, cell.replace('$', r'\$')))
+
     @magic.line_magic
     def slogin(self, line=''):
         self.logout()
