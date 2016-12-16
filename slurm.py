@@ -22,6 +22,10 @@ class Slurm(magic.Magics):
         self.logout()
         super(Slurm, self).__del__()
 
+    def __repr__(self):
+        if self._ssh is not None:
+            return 'Logged in to {}'.format(self._ssh.get_host_keys().keys()[0])
+
     def execute(self, command, verbose=True):
         _, stdout, stderr = self._ssh.exec_command(command)
         stdouts = []
