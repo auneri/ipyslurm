@@ -36,8 +36,7 @@ class Slurm(magic.Magics):
 
     def loggedin(self):
         if self._ssh is None:
-            print('Please login to cluster using %slogin', file=sys.stderr)
-        return self._ssh is not None
+            raise paramiko.AuthenticationException('Please login to cluster using %slogin')
 
     def login(self, server, username, password):
         try:
@@ -55,14 +54,12 @@ class Slurm(magic.Magics):
 
     @magic.cell_magic
     def sbash(self, line='', cell=None):
-        if not self.loggedin():
-            return
+        self.loggedin()
         self.execute(cell.format(**self.shell.user_ns))
 
     @magic.cell_magic
     def sbatch(self, line='', cell=None):
-        if not self.loggedin():
-            return
+        self.loggedin()
         self.execute('sbatch {} --wrap="{}"'.format(line, cell.replace('$', r'\$')))
 
     @magic.line_magic
@@ -88,8 +85,7 @@ class Slurm(magic.Magics):
 
     @magic.line_magic
     def srepeat(self, line=''):
-        if not self.loggedin():
-            return
+        self.loggedin()
         try:
             while True:
                 clear_output(wait=True)
