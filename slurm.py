@@ -52,10 +52,11 @@ class Slurm(magic.Magics):
             self._ssh.close()
             self._ssh = None
 
+    @magic.line_magic
     @magic.cell_magic
     def sbash(self, line='', cell=None):
         self.loggedin()
-        self.execute(cell.format(**self.shell.user_ns))
+        self.execute('{}\n{}'.format(line, cell or ''))
 
     @magic.cell_magic
     def sbatch(self, line='', cell=None):
