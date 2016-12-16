@@ -22,6 +22,18 @@ class Slurm(magic.Magics):
         self.logout()
         super(Slurm, self).__del__()
 
+    def execute(self, command):
+        _, stdout, stderr = self._ssh.exec_command(command)
+        stdouts = []
+        stderrs = []
+        for line in stdout:
+            print(line.strip('\n'), file=sys.stdout)
+            stdouts.append(line.strip('\n'))
+        for line in stderr:
+            print(line.strip('\n'), file=sys.stderr)
+            stderrs.append(line.strip('\n'))
+        return stdouts, stderrs
+
     def loggedin(self):
         if self._ssh is None:
             print('Please login to cluster using %slogin', file=sys.stderr)
@@ -45,11 +57,7 @@ class Slurm(magic.Magics):
     def sbash(self, line='', cell=None):
         if not self.loggedin():
             return
-        _, stdout, stderr = self._ssh.exec_command(cell.format(**self.shell.user_ns))
-        for line in stdout:
-            print(line.strip('\n'), file=sys.stdout)
-        for line in stderr:
-            print(line.strip('\n'), file=sys.stderr)
+        self.execute(cell.format(**self.shell.user_ns))
 
     @magic.line_magic
     def slogin(self, line=''):
@@ -79,7 +87,7 @@ class Slurm(magic.Magics):
         try:
             while True:
                 clear_output(wait=True)
-                self.sbash(cell=line)
+                self.execute(line)
                 time.sleep(1)
         except:
             pass
