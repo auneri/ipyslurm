@@ -47,9 +47,9 @@ class Slurm(magic.Magics):
             return
         _, stdout, stderr = self._ssh.exec_command(cell.format(**self.shell.user_ns))
         for line in stdout:
-            print(line.strip('\n'), file=sys.stdout, flush=True)
+            print(line.strip('\n'), file=sys.stdout)
         for line in stderr:
-            print(line.strip('\n'), file=sys.stderr, flush=True)
+            print(line.strip('\n'), file=sys.stderr)
 
     @magic.line_magic
     def slogin(self, line=''):
@@ -73,13 +73,13 @@ class Slurm(magic.Magics):
         self.logout()
 
     @magic.line_magic
-    def squeue(self, line=''):
+    def srepeat(self, line=''):
         if not self.loggedin():
             return
         try:
             while True:
                 clear_output(wait=True)
-                self.sbash(cell='squeue')
+                self.sbash(cell=line)
                 time.sleep(1)
         except:
             pass
