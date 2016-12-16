@@ -22,15 +22,17 @@ class Slurm(magic.Magics):
         self.logout()
         super(Slurm, self).__del__()
 
-    def execute(self, command):
+    def execute(self, command, verbose=True):
         _, stdout, stderr = self._ssh.exec_command(command)
         stdouts = []
         stderrs = []
         for line in stdout:
-            print(line.strip('\n'), file=sys.stdout)
+            if verbose:
+                print(line.strip('\n'), file=sys.stdout)
             stdouts.append(line.strip('\n'))
         for line in stderr:
-            print(line.strip('\n'), file=sys.stderr)
+            if verbose:
+                print(line.strip('\n'), file=sys.stderr)
             stderrs.append(line.strip('\n'))
         return stdouts, stderrs
 
@@ -94,6 +96,45 @@ class Slurm(magic.Magics):
                 time.sleep(1)
         except:
             pass
+
+    @magic.cell_magic
+    def ssftp(self, line='', cell=None):
+        """Commands: cd, chmod, chown, get, ln, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
+        See interactive commands section of http://man.openbsd.org/sftp for details.
+        """
+        self.loggedin()
+        sftp = self._ssh.open_sftp()
+        sftp.chdir(self.execute('pwd', verbose=False)[0][0])
+        for line in cell.splitlines():
+            argv = line.split()
+            if not argv:
+                continue
+            if argv[0].startswith('#'):
+                continue
+            commands = {
+                'cd': 'chdir',
+                'chmod': 'chmod',
+                'chown': 'chown',
+                'get': 'get',
+                'ln': 'symlink',
+                'ls': 'listdir',
+                'mkdir': 'mkdir',
+                'put': 'put',
+                'pwd': 'getcwd',
+                'rename': 'rename',
+                'rm': 'remove',
+                'rmdir': 'rmdir',
+                'symlink': 'symlink'}
+            if argv[0] in commands:
+                command = commands[argv[0]]
+                output = getattr(sftp, command)(*argv[1:])
+                if command == 'getcwd':
+                    print(output)
+                elif command == 'listdir':
+                    print('\n'.join(sorted(output)))
+            else:
+                raise SyntaxError('Command "{}" is not supported'.format(argv[0]))
+        sftp.close()
 
 
 def load_ipython_extension(ipython):
