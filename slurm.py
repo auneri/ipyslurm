@@ -62,7 +62,7 @@ class Slurm(magic.Magics):
     @magic.cell_magic
     def sbash(self, line='', cell=None):
         self.loggedin()
-        self.execute('{}\n{}'.format(line, cell or ''))
+        self.execute(cell or line)
 
     @magic.cell_magic
     def sbatch(self, line='', cell=None):
@@ -77,6 +77,8 @@ class Slurm(magic.Magics):
         username = opts.get('u', None) or opts.get('username', None)
         password = opts.get('p', None) or opts.get('password', None)
         assert server is not None, 'Server address is required'
+        if server is None:
+            server = input('Server: ')
         if username is None:
             username = input('JHED Username: ')
         if password is None:
@@ -98,7 +100,7 @@ class Slurm(magic.Magics):
                 clear_output(wait=True)
                 self.execute(line)
                 time.sleep(1)
-        except:
+        except KeyboardInterrupt:
             pass
 
     @magic.cell_magic
