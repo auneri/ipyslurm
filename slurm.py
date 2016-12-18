@@ -68,7 +68,34 @@ class Slurm(magic.Magics):
     @magic.cell_magic
     def sbatch(self, line='', cell=None):
         self.loggedin()
-        self.execute('sbatch {} --wrap="{}"'.format(line, cell.replace('$', r'\$')))
+        job = None
+        wait = '--wait' in line
+        if wait:
+            line = line.replace('--wait', '')
+        tail = '--tail' in line
+        if tail:
+            line = line.replace('--tail', '')
+        block = wait or tail
+        stdouts, _ = self.execute('sbatch {} --wrap="{}"'.format(line, cell.replace('$', r'\$')))
+        if stdouts[-1].startswith('Submitted batch job '):
+            job = int(stdouts[-1].lstrip('Submitted batch job '))
+        if block and job is not None:
+            keys = 'JobId', 'JobName', 'JobState', 'SubmitTime', 'StartTime', 'RunTime'
+            fill = max(len(i) for i in keys)
+            try:
+                while True:
+                    clear_output(wait=True)
+                    stdouts, _ = self.execute('scontrol show jobid {}'.format(job), verbose=False)
+                    details = dict(line.split('=', 1) for line in '\n'.join(stdouts).split())
+                    if tail:
+                        self.execute('tail -n5 {}'.format(details['StdOut']))
+                    else:
+                        for key in keys:
+                            print('{1:>{0}}: {2}'.format(fill, key, details[key]))
+                    if details['JobState'] == 'COMPLETED':
+                        break
+            except KeyboardInterrupt:
+                pass
 
     @magic.line_magic
     def slogin(self, line=''):
