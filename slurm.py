@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 import time
+from datetime import datetime
 from getpass import getpass
 
 import paramiko
@@ -92,14 +93,24 @@ class Slurm(magic.Magics):
             print('Logging out of {}'.format(self._ssh.get_host_keys().keys()[0]))
         self.logout()
 
-    @magic.line_magic
-    def srepeat(self, line=''):
+    @magic.cell_magic
+    def srepeat(self, line='', cell=None):
+        opts, _ = self.parse_options(line, 'p:t:', 'period=', 'timeout=')
+        period = opts.get('p', None) or opts.get('period', None)
+        timeout = opts.get('t', None) or opts.get('timeout', None)
         self.loggedin()
+        period = 1.0 if period is None else float(period)
+        timeout = None if timeout is None else float(timeout)
+        start = datetime.now()
         try:
             while True:
                 clear_output(wait=True)
-                self.execute(line)
-                time.sleep(1)
+                self.execute(cell or line)
+                elapsed = (datetime.now() - start).total_seconds()
+                if timeout is not None and elapsed > timeout:
+                    print('\nTimed out after {:.1f} seconds'.format(elapsed))
+                    break
+                time.sleep(period)
         except KeyboardInterrupt:
             pass
 
