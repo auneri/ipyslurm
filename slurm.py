@@ -80,7 +80,12 @@ class Slurm(magic.Magics):
         if tail:
             line = line.replace('--tail', '')
         block = wait or tail
-        stdouts, _ = self.execute('sbatch {} --wrap="{}"'.format(line, cell))
+        if cell.startswith('#!'):
+            self.execute('echo -e "{}" > ~/.sbatch'.format(cell))
+            stdouts, _ = self.execute('sbatch {} ~/.sbatch'.format(line))
+            self.execute('rm ~/.sbatch')
+        else:
+            stdouts, _ = self.execute('sbatch {} --wrap="{}"'.format(line, cell))
         if stdouts[-1].startswith('Submitted batch job '):
             job = int(stdouts[-1].lstrip('Submitted batch job '))
         if block and job is not None:
