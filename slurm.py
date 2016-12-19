@@ -63,11 +63,15 @@ class Slurm(magic.Magics):
     @magic.cell_magic
     def sbash(self, line='', cell=None):
         self.loggedin()
+        line = line.replace('\\', '\\\\\\').replace('$', r'\$')
+        if cell is not None:
+            cell = cell.replace('\\', '\\\\\\').replace('$', r'\$')
         self.execute(cell or line)
 
     @magic.cell_magic
     def sbatch(self, line='', cell=None):
         self.loggedin()
+        cell = cell.replace('\\', '\\\\\\').replace('$', r'\$')
         job = None
         wait = '--wait' in line
         if wait:
@@ -76,7 +80,7 @@ class Slurm(magic.Magics):
         if tail:
             line = line.replace('--tail', '')
         block = wait or tail
-        stdouts, _ = self.execute('sbatch {} --wrap="{}"'.format(line, cell.replace('$', r'\$')))
+        stdouts, _ = self.execute('sbatch {} --wrap="{}"'.format(line, cell))
         if stdouts[-1].startswith('Submitted batch job '):
             job = int(stdouts[-1].lstrip('Submitted batch job '))
         if block and job is not None:
@@ -126,17 +130,18 @@ class Slurm(magic.Magics):
 
     @magic.cell_magic
     def srepeat(self, line='', cell=None):
+        self.loggedin()
+        cell = cell.replace('\\', '\\\\\\').replace('$', r'\$')
         opts, _ = self.parse_options(line, 'p:t:', 'period=', 'timeout=')
         period = opts.get('p', None) or opts.get('period', None)
         timeout = opts.get('t', None) or opts.get('timeout', None)
-        self.loggedin()
         period = 1.0 if period is None else float(period)
         timeout = None if timeout is None else float(timeout)
         start = datetime.now()
         try:
             while True:
                 clear_output(wait=True)
-                self.execute(cell or line)
+                self.execute(cell)
                 elapsed = (datetime.now() - start).total_seconds()
                 if timeout is not None and elapsed > timeout:
                     print('\nTimed out after {:.1f} seconds'.format(elapsed))
