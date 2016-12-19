@@ -110,8 +110,12 @@ class Slurm(magic.Magics):
         if username is None:
             username = input('JHED Username: ')
         if password is None:
-            password = getpass('JHED Password: ')
-        self.login(server, username, password)
+            try:
+                self.login(server, username, password='')
+            except paramiko.AuthenticationException:
+                self.login(server, username, password=getpass('JHED Password: '))
+        else:
+            self.login(server, username, password)
         return self
 
     @magic.line_magic
