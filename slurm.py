@@ -59,14 +59,11 @@ class Slurm(magic.Magics):
             self._ssh.close()
             self._ssh = None
 
-    @magic.line_magic
     @magic.cell_magic
     def sbash(self, line='', cell=None):
         self.loggedin()
-        line = line.replace('\\', '\\\\\\').replace('$', r'\$')
-        if cell is not None:
-            cell = cell.replace('\\', '\\\\\\').replace('$', r'\$')
-        self.execute(cell or line)
+        cell = cell.replace('\\', '\\\\\\')
+        self.execute(cell)
 
     @magic.cell_magic
     def sbatch(self, line='', cell=None):
