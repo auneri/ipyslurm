@@ -83,7 +83,7 @@ class Slurm(magic.Magics):
             self.execute('rm ~/.sbatch')
         else:
             stdouts, _ = self.execute('sbatch {} --wrap="{}"'.format(line, cell))
-        if stdouts[-1].startswith('Submitted batch job '):
+        if stdouts and stdouts[-1].startswith('Submitted batch job '):
             job = int(stdouts[-1].lstrip('Submitted batch job '))
         if block and job is not None:
             keys = 'JobId', 'JobName', 'JobState', 'SubmitTime', 'StartTime', 'RunTime'
