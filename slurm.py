@@ -60,15 +60,8 @@ class Slurm(magic.Magics):
             self._ssh = None
 
     @magic.cell_magic
-    def sbash(self, line='', cell=None):
-        self.loggedin()
-        cell = cell.replace('\\', '\\\\\\')
-        self.execute(cell)
-
-    @magic.cell_magic
     def sbatch(self, line='', cell=None):
         self.loggedin()
-        cell = cell.replace('\\', '\\\\\\').replace('$', r'\$')
         job = None
         wait = '--wait' in line
         if wait:
@@ -77,10 +70,11 @@ class Slurm(magic.Magics):
         if tail:
             line = line.replace('--tail', '')
         block = wait or tail
+        cell = cell.replace('\\', '\\\\\\').replace('$', r'\$')
         if cell.startswith('#!'):
-            self.execute('echo -e "{}" > ~/.sbatch'.format(cell))
-            stdouts, _ = self.execute('sbatch {} ~/.sbatch'.format(line))
-            self.execute('rm ~/.sbatch')
+            self.execute('echo -e "{}" > ~/.slurm.magic'.format(cell))
+            stdouts, _ = self.execute('sbatch {} ~/.slurm.magic'.format(line))
+            self.execute('rm ~/.slurm.magic')
         else:
             stdouts, _ = self.execute('sbatch {} --wrap="{}"'.format(line, cell))
         if stdouts and stdouts[-1].startswith('Submitted batch job '):
@@ -130,28 +124,6 @@ class Slurm(magic.Magics):
         self.logout()
 
     @magic.cell_magic
-    def srepeat(self, line='', cell=None):
-        self.loggedin()
-        cell = cell.replace('\\', '\\\\\\').replace('$', r'\$')
-        opts, _ = self.parse_options(line, 'p:t:', 'period=', 'timeout=')
-        period = opts.get('p', None) or opts.get('period', None)
-        timeout = opts.get('t', None) or opts.get('timeout', None)
-        period = 1.0 if period is None else float(period)
-        timeout = None if timeout is None else float(timeout)
-        start = datetime.now()
-        try:
-            while True:
-                clear_output(wait=True)
-                self.execute(cell)
-                elapsed = (datetime.now() - start).total_seconds()
-                if timeout is not None and elapsed > timeout:
-                    print('\nTimed out after {:.1f} seconds'.format(elapsed))
-                    break
-                time.sleep(period)
-        except KeyboardInterrupt:
-            pass
-
-    @magic.cell_magic
     def ssftp(self, line='', cell=None):
         """Commands: cd, chmod, chown, get, ln, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
         See interactive commands section of http://man.openbsd.org/sftp for details.
@@ -189,6 +161,42 @@ class Slurm(magic.Magics):
             else:
                 raise SyntaxError('Command "{}" is not supported'.format(argv[0]))
         sftp.close()
+
+    @magic.cell_magic
+    def sshell(self, line='', cell=None):
+        self.loggedin()
+        opts, _ = self.parse_options(line, 'p:t:', 'period=', 'timeout=')
+        period = opts.get('p', None) or opts.get('period', None)
+        timeout = opts.get('t', None) or opts.get('timeout', None)
+        if period is not None:
+            period = float(period)
+        if timeout is not None:
+            timeout = float(timeout)
+        cell = cell.replace('\\', '\\\\\\')
+        if cell.startswith('#!'):
+            self.execute('echo -e "{}" > ~/.slurm.magic'.format(cell))
+            self.execute('chmod +x ~/.slurm.magic'.format(cell))
+        start = datetime.now()
+        try:
+            while True:
+                clear_output(wait=True)
+                if cell.startswith('#!'):
+                    self.execute('~/.slurm.magic'.format(line))
+                else:
+                    self.execute(cell)
+                elapsed = (datetime.now() - start).total_seconds()
+                if timeout is not None and elapsed > timeout:
+                    print('\nTimed out after {:.1f} seconds'.format(elapsed))
+                    break
+                if period is not None:
+                    time.sleep(period)
+                else:
+                    break
+        except KeyboardInterrupt:
+            pass
+        finally:
+            if cell.startswith('#!'):
+                self.execute('rm ~/.slurm.magic')
 
 
 def load_ipython_extension(ipython):
