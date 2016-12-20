@@ -70,7 +70,7 @@ class Slurm(magic.Magics):
         if tail:
             line = line.replace('--tail', '')
         block = wait or tail
-        cell = cell.replace('\\', '\\\\\\').replace('$', r'\$')
+        cell = cell.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"')
         if cell.startswith('#!'):
             self.execute('echo -e "{}" > ~/.slurm.magic'.format(cell))
             stdouts, _ = self.execute('sbatch {} ~/.slurm.magic'.format(line))
@@ -172,8 +172,8 @@ class Slurm(magic.Magics):
             period = float(period)
         if timeout is not None:
             timeout = float(timeout)
-        cell = cell.replace('\\', '\\\\\\')
         if cell.startswith('#!'):
+            cell = cell.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"')
             self.execute('echo -e "{}" > ~/.slurm.magic'.format(cell))
             self.execute('chmod +x ~/.slurm.magic'.format(cell))
         start = datetime.now()
