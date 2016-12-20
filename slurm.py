@@ -113,7 +113,6 @@ class Slurm(magic.Magics):
         server = opts.get('s', None) or opts.get('server', None)
         username = opts.get('u', None) or opts.get('username', None)
         password = opts.get('p', None) or opts.get('password', None)
-        assert server is not None, 'Server address is required'
         if server is None:
             server = input('Server: ')
         if username is None:
