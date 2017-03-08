@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 import time
-from datetime import datetime
+import timeit
 from getpass import getpass
 
 import paramiko
@@ -176,7 +176,7 @@ class Slurm(magic.Magics):
             cell = cell.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"')
             self.execute('echo -e "{}" > ~/.slurm.magic'.format(cell))
             self.execute('chmod +x ~/.slurm.magic'.format(cell))
-        start = datetime.now()
+        start = timeit.default_timer()
         try:
             while True:
                 clear_output(wait=True)
@@ -184,7 +184,7 @@ class Slurm(magic.Magics):
                     self.execute('~/.slurm.magic'.format(line))
                 else:
                     self.execute(cell)
-                elapsed = (datetime.now() - start).total_seconds()
+                elapsed = timeit.default_timer() - start
                 if timeout is not None and elapsed > timeout:
                     print('\nTimed out after {:.1f} seconds'.format(elapsed))
                     break
