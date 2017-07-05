@@ -1,9 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
+import getpass
 import sys
 import time
 import timeit
-from getpass import getpass
 
 import paramiko
 from IPython.core import magic
@@ -107,12 +107,12 @@ class Slurm(magic.Magics):
         if server is None:
             server = input('Server: ')
         if username is None:
-            username = input('JHED Username: ')
+            username = getpass.getuser()
         if password is None:
             try:
                 self.login(server, username, password='')
             except paramiko.AuthenticationException:
-                self.login(server, username, password=getpass('JHED Password: '))
+                self.login(server, username, password=getpass.getpass('Password for {}: '.format(username)))
         else:
             self.login(server, username, password)
         return self
@@ -126,6 +126,7 @@ class Slurm(magic.Magics):
     @magic.cell_magic
     def ssftp(self, line='', cell=None):
         """Commands: cd, chmod, chown, get, ln, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
+
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
         self.loggedin()
