@@ -45,11 +45,23 @@ class Slurm(magic.Magics):
         if self._ssh is None:
             raise paramiko.AuthenticationException('Please login to cluster using %slogin')
 
-    def login(self, server, username, password):
+    def login(self, server, username, password=None):
         try:
             self._ssh = paramiko.SSHClient()
             self._ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            self._ssh.connect(server, username=username, password=password)
+            if password is None:
+                try:
+                    self._ssh.connect(server, username=username)
+                except paramiko.AuthenticationException:
+                    def handler(title, instructions, prompt_list):
+                        if title:
+                            print(title.strip())
+                        if instructions:
+                            print(instructions.strip())
+                        return [show_input and input(prompt.strip()) or getpass.getpass(prompt.strip()) for prompt, show_input in prompt_list]
+                    self._ssh.get_transport().auth_interactive_dumb(username=username, handler=handler)
+            else:
+                self._ssh.connect(server, username=username, password=password)
         except paramiko.AuthenticationException:
             self.logout()
             raise
@@ -108,13 +120,7 @@ class Slurm(magic.Magics):
             server = input('Server: ')
         if username is None:
             username = getpass.getuser()
-        if password is None:
-            try:
-                self.login(server, username, password='')
-            except paramiko.AuthenticationException:
-                self.login(server, username, password=getpass.getpass('Password for {}: '.format(username)))
-        else:
-            self.login(server, username, password)
+        self.login(server, username, password)
         return self
 
     @magic.line_magic
