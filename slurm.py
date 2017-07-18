@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import getpass
-import sys
 import time
 import timeit
 
@@ -10,6 +9,8 @@ from IPython.core import magic
 from IPython.display import clear_output
 from six import print_ as print
 from six.moves import input
+
+from PythonTools.distributed import SSHClient
 
 
 @magic.magics_class
@@ -20,60 +21,17 @@ class Slurm(magic.Magics):
         self._ssh = None
 
     def __del__(self):
-        self.logout()
+        self.slogout()
         super(Slurm, self).__del__()
 
     def __repr__(self):
         if self._ssh is not None:
-            return 'Logged in to {}'.format(self._ssh.get_host_keys().keys()[0])
-
-    def execute(self, command, verbose=True):
-        _, stdout, stderr = self._ssh.exec_command(command)
-        stdouts = []
-        stderrs = []
-        for line in stdout:
-            if verbose:
-                print(line.strip('\n'), file=sys.stdout)
-            stdouts.append(line.strip('\n'))
-        for line in stderr:
-            if verbose:
-                print(line.strip('\n'), file=sys.stderr)
-            stderrs.append(line.strip('\n'))
-        return stdouts, stderrs
-
-    def loggedin(self):
-        if self._ssh is None:
-            raise paramiko.AuthenticationException('Please login to cluster using %slogin')
-
-    def login(self, server, username, password=None):
-        try:
-            self._ssh = paramiko.SSHClient()
-            self._ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            if password is None:
-                try:
-                    self._ssh.connect(server, username=username)
-                except paramiko.AuthenticationException:
-                    def handler(title, instructions, prompt_list):
-                        if title:
-                            print(title.strip())
-                        if instructions:
-                            print(instructions.strip())
-                        return [show_input and input(prompt.strip()) or getpass.getpass(prompt.strip()) for prompt, show_input in prompt_list]
-                    self._ssh.get_transport().auth_interactive_dumb(username=username, handler=handler)
-            else:
-                self._ssh.connect(server, username=username, password=password)
-        except paramiko.AuthenticationException:
-            self.logout()
-            raise
-
-    def logout(self):
-        if self._ssh is not None:
-            self._ssh.close()
-            self._ssh = None
+            return 'Logged in to {}'.format(self._ssh.get_server())
 
     @magic.cell_magic
     def sbatch(self, line='', cell=None):
-        self.loggedin()
+        if self._ssh is None:
+            raise paramiko.AuthenticationException('Please login using %slogin')
         job = None
         wait = '--wait' in line
         if wait:
@@ -84,11 +42,11 @@ class Slurm(magic.Magics):
         block = wait or tail
         cell = cell.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"')
         if cell.startswith('#!'):
-            self.execute('echo -e "{}" > ~/.slurm.magic'.format(cell))
-            stdouts, _ = self.execute('sbatch {} ~/.slurm.magic'.format(line))
-            self.execute('rm ~/.slurm.magic')
+            self._ssh.exec_command('echo -e "{}" > ~/.slurm.magic'.format(cell))
+            stdouts, _ = self._ssh.exec_command('sbatch {} ~/.slurm.magic'.format(line))
+            self._ssh.exec_command('rm ~/.slurm.magic')
         else:
-            stdouts, _ = self.execute('sbatch {} --wrap="{}"'.format(line, cell))
+            stdouts, _ = self._ssh.exec_command('sbatch {} --wrap="{}"'.format(line, cell))
         if stdouts and stdouts[-1].startswith('Submitted batch job '):
             job = int(stdouts[-1].lstrip('Submitted batch job '))
         if block and job is not None:
@@ -96,22 +54,21 @@ class Slurm(magic.Magics):
             fill = max(len(i) for i in keys)
             try:
                 while True:
-                    stdouts, _ = self.execute('scontrol show jobid {}'.format(job), verbose=False)
+                    stdouts, _ = self._ssh.exec_command('scontrol show jobid {}'.format(job), verbose=False)
                     details = dict(line.split('=', 1) for line in '\n'.join(stdouts).split())
                     if details['JobState'] == 'COMPLETED':
                         break
                     clear_output(wait=True)
                     if tail and details['JobState'] == 'RUNNING':
-                        self.execute('tail --lines=5 {}'.format(details['StdOut']))
+                        self._ssh.exec_command('tail --lines=5 {}'.format(details['StdOut']))
                     else:
                         for key in keys:
                             print('{1:>{0}}: {2}'.format(fill, key, details[key]))
             except KeyboardInterrupt:
-                self.execute('scancel {}'.format(job))
+                self._ssh.exec_command('scancel {}'.format(job))
 
     @magic.line_magic
     def slogin(self, line=''):
-        self.logout()
         opts, _ = self.parse_options(line, 's:u:p:', 'server=', 'username=', 'password=')
         server = opts.get('s', None) or opts.get('server', None)
         username = opts.get('u', None) or opts.get('username', None)
@@ -120,14 +77,20 @@ class Slurm(magic.Magics):
             server = input('Server: ')
         if username is None:
             username = getpass.getuser()
-        self.login(server, username, password)
+        try:
+            print('Logging into {}@{}'.format(username, server))
+            self._ssh = SSHClient()
+            self._ssh.connect(server, username, password)
+        except paramiko.AuthenticationException:
+            self._ssh = None
+            raise
         return self
 
     @magic.line_magic
     def slogout(self, line=''):
         if self._ssh is not None:
-            print('Logging out of {}'.format(self._ssh.get_host_keys().keys()[0]))
-        self.logout()
+            print('Logging out of {}'.format(self._ssh.get_server()))
+        self._ssh = None
 
     @magic.cell_magic
     def ssftp(self, line='', cell=None):
@@ -135,9 +98,10 @@ class Slurm(magic.Magics):
 
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
-        self.loggedin()
+        if self._ssh is None:
+            raise paramiko.AuthenticationException('Please login using %slogin')
         sftp = self._ssh.open_sftp()
-        sftp.chdir(self.execute('pwd', verbose=False)[0][0])
+        sftp.chdir(self._ssh.exec_command('pwd', verbose=False)[0][0])
         for line in cell.splitlines():
             argv = line.split()
             if not argv:
@@ -171,7 +135,8 @@ class Slurm(magic.Magics):
 
     @magic.cell_magic
     def sshell(self, line='', cell=None):
-        self.loggedin()
+        if self._ssh is None:
+            raise paramiko.AuthenticationException('Please login using %slogin')
         opts, _ = self.parse_options(line, 'p:t:', 'period=', 'timeout=')
         period = opts.get('p', None) or opts.get('period', None)
         timeout = opts.get('t', None) or opts.get('timeout', None)
@@ -181,16 +146,16 @@ class Slurm(magic.Magics):
             timeout = float(timeout)
         if cell.startswith('#!'):
             cell = cell.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"')
-            self.execute('echo -e "{}" > ~/.slurm.magic'.format(cell))
-            self.execute('chmod +x ~/.slurm.magic'.format(cell))
+            self._ssh.exec_command('echo -e "{}" > ~/.slurm.magic'.format(cell))
+            self._ssh.exec_command('chmod +x ~/.slurm.magic'.format(cell))
         start = timeit.default_timer()
         try:
             while True:
                 clear_output(wait=True)
                 if cell.startswith('#!'):
-                    self.execute('~/.slurm.magic'.format(line))
+                    self._ssh.exec_command('~/.slurm.magic'.format(line))
                 else:
-                    self.execute(cell)
+                    self._ssh.exec_command(cell)
                 elapsed = timeit.default_timer() - start
                 if timeout is not None and elapsed > timeout:
                     print('\nTimed out after {:.1f} seconds'.format(elapsed))
@@ -203,7 +168,7 @@ class Slurm(magic.Magics):
             pass
         finally:
             if cell.startswith('#!'):
-                self.execute('rm ~/.slurm.magic')
+                self._ssh.exec_command('rm ~/.slurm.magic')
 
 
 def load_ipython_extension(ipython):
