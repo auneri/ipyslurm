@@ -56,14 +56,14 @@ class Slurm(magic.Magics):
                 while True:
                     stdouts, _ = self._ssh.exec_command('scontrol show jobid {}'.format(job), verbose=False)
                     details = dict(line.split('=', 1) for line in '\n'.join(stdouts).split())
-                    if details['JobState'] == 'COMPLETED':
-                        break
                     clear_output(wait=True)
-                    if tail and details['JobState'] == 'RUNNING':
+                    if tail and details['JobState'] in ('RUNNING', 'COMPLETING', 'COMPLETED'):
                         self._ssh.exec_command('tail --lines=5 {}'.format(details['StdOut']))
                     else:
                         for key in keys:
                             print('{1:>{0}}: {2}'.format(fill, key, details[key]))
+                    if details['JobState'] not in ('PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING'):
+                        break
             except KeyboardInterrupt:
                 self._ssh.exec_command('scancel {}'.format(job))
 
