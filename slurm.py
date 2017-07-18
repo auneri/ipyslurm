@@ -107,7 +107,7 @@ class Slurm(magic.Magics):
                     if details['JobState'] == 'COMPLETED':
                         break
             except KeyboardInterrupt:
-                pass
+                self.execute('scancel {}'.format(job))
 
     @magic.line_magic
     def slogin(self, line=''):
