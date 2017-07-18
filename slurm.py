@@ -19,6 +19,7 @@ class Slurm(magic.Magics):
     def __init__(self, *args, **kwargs):
         super(Slurm, self).__init__(*args, **kwargs)
         self._ssh = None
+        self._ssh_data = None
 
     def __del__(self):
         self.slogout()
@@ -69,10 +70,11 @@ class Slurm(magic.Magics):
 
     @magic.line_magic
     def slogin(self, line=''):
-        opts, _ = self.parse_options(line, 's:u:p:', 'server=', 'username=', 'password=')
+        opts, _ = self.parse_options(line, 's:u:p:sd:', 'server=', 'username=', 'password=', 'data-server=')
         server = opts.get('s', None) or opts.get('server', None)
         username = opts.get('u', None) or opts.get('username', None)
         password = opts.get('p', None) or opts.get('password', None)
+        server_data = opts.get('ds', None) or opts.get('data-server', None)
         if server is None:
             server = input('Server: ')
         if username is None:
@@ -84,6 +86,14 @@ class Slurm(magic.Magics):
         except paramiko.AuthenticationException:
             self._ssh = None
             raise
+        if server_data is not None:
+            try:
+                print('Logging into {}@{}'.format(username, server_data))
+                self._ssh_data = SSHClient()
+                self._ssh_data.connect(server_data, username, password)
+            except paramiko.AuthenticationException:
+                self._ssh_data = None
+                raise
         return self
 
     @magic.line_magic
@@ -91,6 +101,9 @@ class Slurm(magic.Magics):
         if self._ssh is not None:
             print('Logging out of {}'.format(self._ssh.get_server()))
         self._ssh = None
+        if self._ssh_data is not None:
+            print('Logging out of {}'.format(self._ssh_data.get_server()))
+        self._ssh_data = None
 
     @magic.cell_magic
     def ssftp(self, line='', cell=None):
@@ -100,8 +113,9 @@ class Slurm(magic.Magics):
         """
         if self._ssh is None:
             raise paramiko.AuthenticationException('Please login using %slogin')
-        sftp = self._ssh.open_sftp()
-        sftp.chdir(self._ssh.exec_command('pwd', verbose=False)[0][0])
+        ssh = self._ssh if self._ssh_data is None else self._ssh_data
+        sftp = ssh.open_sftp()
+        sftp.chdir(ssh.exec_command('pwd', verbose=False)[0][0])
         for line in cell.splitlines():
             argv = line.split()
             if not argv:
