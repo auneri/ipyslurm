@@ -96,16 +96,16 @@ class Slurm(magic.Magics):
             fill = max(len(i) for i in keys)
             try:
                 while True:
-                    clear_output(wait=True)
                     stdouts, _ = self.execute('scontrol show jobid {}'.format(job), verbose=False)
                     details = dict(line.split('=', 1) for line in '\n'.join(stdouts).split())
-                    if tail:
-                        self.execute('tail -n5 {}'.format(details['StdOut']))
+                    if details['JobState'] == 'COMPLETED':
+                        break
+                    clear_output(wait=True)
+                    if tail and details['JobState'] == 'RUNNING':
+                        self.execute('tail --lines=5 {}'.format(details['StdOut']))
                     else:
                         for key in keys:
                             print('{1:>{0}}: {2}'.format(fill, key, details[key]))
-                    if details['JobState'] == 'COMPLETED':
-                        break
             except KeyboardInterrupt:
                 self.execute('scancel {}'.format(job))
 
