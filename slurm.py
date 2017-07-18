@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import getpass
+import os
 import time
 import timeit
 
@@ -127,7 +128,9 @@ class Slurm(magic.Magics):
                 'chmod': 'chmod',
                 'chown': 'chown',
                 'get': 'get',
+                'lls': 'listdir',
                 'ln': 'symlink',
+                'lpwd': 'getcwd',
                 'ls': 'listdir',
                 'mkdir': 'mkdir',
                 'put': 'put',
@@ -138,7 +141,10 @@ class Slurm(magic.Magics):
                 'symlink': 'symlink'}
             if argv[0] in commands:
                 command = commands[argv[0]]
-                output = getattr(sftp, command)(*argv[1:])
+                if argv[0] in ('lls', 'lpwd'):
+                    output = getattr(os, command)(*argv[1:])
+                else:
+                    output = getattr(sftp, command)(*argv[1:])
                 if command == 'getcwd':
                     print(output)
                 elif command == 'listdir':
