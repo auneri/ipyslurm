@@ -13,7 +13,7 @@ from IPython.display import clear_output
 from six import print_ as print
 from six.moves import input
 
-from PythonTools.distributed import SSHClient
+from PythonTools import distributed
 
 
 def interact(channel):
@@ -129,30 +129,33 @@ class Slurm(magic.Magics):
 
     @magic.line_magic
     def slogin(self, line=''):
-        opts, _ = self.parse_options(line, 's:u:p:sd:', 'server=', 'username=', 'password=', 'data-server=')
+        opts, _ = self.parse_options(line, 's:u:p:d:', 'server=', 'username=', 'password=', 'data-server=')
         server = opts.get('s', None) or opts.get('server', None)
         username = opts.get('u', None) or opts.get('username', None)
         password = opts.get('p', None) or opts.get('password', None)
-        server_data = opts.get('ds', None) or opts.get('data-server', None)
+        server_data = opts.get('d', None) or opts.get('data-server', None)
         if server is None:
             server = input('Server: ')
         if username is None:
             username = getpass.getuser()
-        try:
-            print('Logging into {}@{}'.format(username, server))
-            self._ssh = SSHClient()
-            self._ssh.connect(server, username, password)
-        except paramiko.AuthenticationException:
-            self._ssh = None
-            raise
         if server_data is not None:
             try:
-                print('Logging into {}@{}'.format(username, server_data))
-                self._ssh_data = SSHClient()
-                self._ssh_data.connect(server_data, username, password)
-            except paramiko.AuthenticationException:
+                print('Logging in to {}@{}'.format(username, server_data))
+                self._ssh_data = distributed.SSHClient()
+                self._ssh_data.connect(server_data, username, password, allow_agent=False, look_for_keys=False)
+                self._ssh_data.get_transport().set_keepalive(30)
+                print('Please wait for a new verification code before logging in to {}!'.format(server))
+            except:
                 self._ssh_data = None
                 raise
+        try:
+            print('Logging in to {}@{}'.format(username, server))
+            self._ssh = distributed.SSHClient()
+            self._ssh.connect(server, username, password, allow_agent=False, look_for_keys=False)
+            self._ssh.get_transport().set_keepalive(30)
+        except:
+            self._ssh = None
+            raise
         return self
 
     @magic.line_magic
