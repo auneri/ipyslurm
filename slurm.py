@@ -176,7 +176,7 @@ class Slurm(magic.Magics):
     @magic.line_magic
     @magic.cell_magic
     def ssftp(self, line='', cell=None):
-        """Commands: cd, chmod, chown, get, ln, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
+        """Commands: cd, chmod, chown, get, lls, ln, lpwd, ls, mkdir, put, pwd, reget, rename, reput, rm, rmdir, symlink.
 
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
@@ -191,41 +191,55 @@ class Slurm(magic.Magics):
         ssh = self._ssh if self._ssh_data is None else self._ssh_data
         sftp = ssh.open_sftp()
         sftp.chdir(ssh.exec_command('pwd', verbose=False)[0][0])
-        for l in progress.iterator(instructions, hidden=hidden or len(instructions) == 0):
-            argv = l.split()
-            if not argv:
-                continue
-            if argv[0].startswith('#'):
-                continue
-            commands = {
-                'cd': 'chdir',
-                'chmod': 'chmod',
-                'chown': 'chown',
-                'get': 'get',
-                'lls': 'listdir',
-                'ln': 'symlink',
-                'lpwd': 'getcwd',
-                'ls': 'listdir',
-                'mkdir': 'mkdir',
-                'put': 'put',
-                'pwd': 'getcwd',
-                'rename': 'rename',
-                'rm': 'remove',
-                'rmdir': 'rmdir',
-                'symlink': 'symlink'}
-            if argv[0] in commands:
-                command = commands[argv[0]]
-                if argv[0] in ('lls', 'lpwd'):
-                    output = getattr(os, command)(*argv[1:])
+        try:
+            for l in progress.iterator(instructions, hidden=hidden or len(instructions) == 0):
+                argv = l.split()
+                if not argv:
+                    continue
+                if argv[0].startswith('#'):
+                    continue
+                commands = {
+                    'cd': 'chdir',
+                    'chmod': 'chmod',
+                    'chown': 'chown',
+                    'get': 'get',
+                    'lls': 'listdir',
+                    'ln': 'symlink',
+                    'lpwd': 'getcwd',
+                    'ls': 'listdir',
+                    'mkdir': 'mkdir',
+                    'put': 'put',
+                    'pwd': 'getcwd',
+                    'reget': 'get',
+                    'rename': 'rename',
+                    'reput': 'put',
+                    'rm': 'remove',
+                    'rmdir': 'rmdir',
+                    'symlink': 'symlink'}
+                if argv[0] in commands:
+                    command = commands[argv[0]]
+                    if argv[0] in ('lls', 'lpwd'):
+                        output = getattr(os, command)(*argv[1:])
+                    elif argv[0] in ('get', 'put') and '-a' in argv[1:]:
+                        argv.remove('-a')
+                        local, remote = (argv[1], argv[2]) if argv[0] == 'put' else (argv[2], argv[1])
+                        try:
+                            if os.stat(local).st_size != sftp.stat(remote).st_size:
+                                raise IOError
+                        except IOError:
+                            output = getattr(sftp, command)(*argv[1:])
+                    else:
+                        output = getattr(sftp, command)(*argv[1:])
+                    if command == 'getcwd':
+                        print(output)
+                    elif command == 'listdir':
+                        print('\n'.join(sorted(output)))
                 else:
-                    output = getattr(sftp, command)(*argv[1:])
-                if command == 'getcwd':
-                    print(output)
-                elif command == 'listdir':
-                    print('\n'.join(sorted(output)))
-            else:
-                raise SyntaxError('Command "{}" is not supported'.format(argv[0]))
-        sftp.close()
+                    raise SyntaxError('Command "{}" is not supported'.format(argv[0]))
+        except KeyboardInterrupt:
+            pass
+        finally:
+            sftp.close()
 
     @magic.needs_local_scope
     @magic.cell_magic
