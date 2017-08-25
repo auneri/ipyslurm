@@ -14,7 +14,7 @@ from IPython.display import clear_output
 from six import print_ as print
 from six.moves import input
 
-from PythonTools import distributed
+from PythonTools import distributed, progress
 
 
 def interact(channel):
@@ -182,7 +182,8 @@ class Slurm(magic.Magics):
         """
         if self._ssh is None:
             raise paramiko.AuthenticationException('Please login using %slogin')
-        opts, _ = self.parse_options(line, 'i:', 'instructions=')
+        opts, _ = self.parse_options(line, 'pi:', 'progress', 'instructions=')
+        hidden = 'progress' not in opts
         instructions = opts.get('i', '') or opts.get('instructions', '')
         instructions = instructions.splitlines()
         if cell is not None:
@@ -190,8 +191,8 @@ class Slurm(magic.Magics):
         ssh = self._ssh if self._ssh_data is None else self._ssh_data
         sftp = ssh.open_sftp()
         sftp.chdir(ssh.exec_command('pwd', verbose=False)[0][0])
-        for line in cell.splitlines():
-            argv = line.split()
+        for l in progress.iterator(instructions, hidden=hidden or len(instructions) == 0):
+            argv = l.split()
             if not argv:
                 continue
             if argv[0].startswith('#'):
