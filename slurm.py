@@ -173,6 +173,7 @@ class Slurm(magic.Magics):
             print('Logging out of {}'.format(self._ssh_data.get_server()))
         self._ssh_data = None
 
+    @magic.line_magic
     @magic.cell_magic
     def ssftp(self, line='', cell=None):
         """Commands: cd, chmod, chown, get, ln, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
@@ -181,6 +182,11 @@ class Slurm(magic.Magics):
         """
         if self._ssh is None:
             raise paramiko.AuthenticationException('Please login using %slogin')
+        opts, _ = self.parse_options(line, 'i:', 'instructions=')
+        instructions = opts.get('i', '') or opts.get('instructions', '')
+        instructions = instructions.splitlines()
+        if cell is not None:
+            instructions += cell.splitlines()
         ssh = self._ssh if self._ssh_data is None else self._ssh_data
         sftp = ssh.open_sftp()
         sftp.chdir(ssh.exec_command('pwd', verbose=False)[0][0])
@@ -220,11 +226,14 @@ class Slurm(magic.Magics):
                 raise SyntaxError('Command "{}" is not supported'.format(argv[0]))
         sftp.close()
 
+    @magic.needs_local_scope
     @magic.cell_magic
     def sshell(self, line='', cell=None):
         if self._ssh is None:
             raise paramiko.AuthenticationException('Please login using %slogin')
-        opts, _ = self.parse_options(line, 'p:t:', 'period=', 'timeout=')
+        opts, _ = self.parse_options(line, 'p:t:so:se:', 'period=', 'timeout=', 'stdout=', 'stderr=')
+        stdout = opts.get('so', None) or opts.get('stdout', None)
+        stderr = opts.get('se', None) or opts.get('stderr', None)
         period = opts.get('p', None) or opts.get('period', None)
         timeout = opts.get('t', None) or opts.get('timeout', None)
         if period is not None:
@@ -248,7 +257,7 @@ class Slurm(magic.Magics):
         try:
             while True:
                 clear_output(wait=True)
-                self._ssh.exec_command(command)
+                stdouts, stderrs = self._ssh.exec_command(command, verbose=stdout is None and stderr is None)
                 elapsed = timeit.default_timer() - start
                 if timeout is not None and elapsed > timeout:
                     print('\nsshell terminated after {:.1f} seconds'.format(elapsed))
@@ -259,6 +268,11 @@ class Slurm(magic.Magics):
                     break
         except KeyboardInterrupt:
             pass
+        else:
+            if stdout is not None:
+                self.shell.user_ns.update({stdout: stdouts})
+            if stderr is not None:
+                self.shell.user_ns.update({stderr: stderrs})
 
 
 def load_ipython_extension(ipython):
