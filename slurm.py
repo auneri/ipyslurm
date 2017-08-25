@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import datetime
 import getpass
 import os
 import platform
@@ -86,24 +87,29 @@ class Slurm(magic.Magics):
     def sbatch(self, line='', cell=None):
         if self._ssh is None:
             raise paramiko.AuthenticationException('Please login using %slogin')
-        job = None
-        wait = '--wait' in line
-        if wait:
-            line = line.replace('--wait', '')
-        tail = '--tail' in line
-        if tail:
-            line = line.replace('--tail', '')
-        block = wait or tail
-        cell = cell.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"')
-        if cell.startswith('#!'):
-            self._ssh.exec_command('echo -e "{}" > ~/.slurm.magic'.format(cell))
-            stdouts, _ = self._ssh.exec_command('sbatch {} ~/.slurm.magic'.format(line))
-            self._ssh.exec_command('rm ~/.slurm.magic')
+        line, wait = line.replace('--wait', ''), '--wait' in line
+        line, tail = line.replace('--tail', ''), '--tail' in line
+        line = ' '.join(l.replace('#SBATCH', '').strip() for l in cell.splitlines() if l.startswith('#SBATCH'))
+        cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines() if not l.startswith('#SBATCH'))
+        shebangs = [i for i, l in enumerate(cell.splitlines()) if l.startswith('#!')]
+        if len(shebangs) == 0:
+            command = '\n'.join(cell.splitlines())
+        elif len(shebangs) == 1:
+            command = '\n'.join(cell.splitlines()[:shebangs[0]])
+            script = '\n'.join(cell.splitlines()[shebangs[0]:])
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            self._ssh.exec_command('mkdir -p ~/.magic'.format(script))
+            self._ssh.exec_command('echo -e "{}" > ~/.magic/sbatch_{}'.format(script, timestamp))
+            self._ssh.exec_command('chmod +x ~/.magic/sbatch_{}'.format(timestamp))
+            command = '\n'.join((command, '~/.magic/sbatch_{}'.format(timestamp)))
         else:
-            stdouts, _ = self._ssh.exec_command('sbatch {} --wrap="{}"'.format(line, cell))
+            raise NotImplementedError
+        stdouts, _ = self._ssh.exec_command('sbatch {} --wrap="{}"'.format(line, command))
         if stdouts and stdouts[-1].startswith('Submitted batch job '):
             job = int(stdouts[-1].lstrip('Submitted batch job '))
-        if block and job is not None:
+        else:
+            job = None
+        if job is not None and (wait or tail):
             keys = 'JobId', 'JobName', 'JobState', 'SubmitTime', 'StartTime', 'RunTime'
             fill = max(len(i) for i in keys)
             try:
