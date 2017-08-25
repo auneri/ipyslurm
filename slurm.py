@@ -231,21 +231,27 @@ class Slurm(magic.Magics):
             period = float(period)
         if timeout is not None:
             timeout = float(timeout)
-        if cell.startswith('#!'):
-            cell = cell.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"')
-            self._ssh.exec_command('echo -e "{}" > ~/.slurm.magic'.format(cell))
-            self._ssh.exec_command('chmod +x ~/.slurm.magic'.format(cell))
+        cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines())
+        shebangs = [i for i, l in enumerate(cell.splitlines()) if l.startswith('#!')]
+        if len(shebangs) == 0:
+            command = '\n'.join(cell.splitlines())
+        elif len(shebangs) == 1:
+            command = '\n'.join(cell.splitlines()[:shebangs[0]])
+            script = '\n'.join(cell.splitlines()[shebangs[0]:])
+            self._ssh.exec_command('mkdir -p ~/.magic'.format(script))
+            self._ssh.exec_command('echo -e "{}" > ~/.magic/sshell'.format(script))
+            self._ssh.exec_command('chmod +x ~/.magic/sshell')
+            command = '\n'.join((command, '~/.magic/sshell'))
+        else:
+            raise NotImplementedError
         start = timeit.default_timer()
         try:
             while True:
                 clear_output(wait=True)
-                if cell.startswith('#!'):
-                    self._ssh.exec_command('~/.slurm.magic'.format(line))
-                else:
-                    self._ssh.exec_command(cell)
+                self._ssh.exec_command(command)
                 elapsed = timeit.default_timer() - start
                 if timeout is not None and elapsed > timeout:
-                    print('\nTimed out after {:.1f} seconds'.format(elapsed))
+                    print('\nsshell terminated after {:.1f} seconds'.format(elapsed))
                     break
                 if period is not None:
                     time.sleep(period)
@@ -253,9 +259,6 @@ class Slurm(magic.Magics):
                     break
         except KeyboardInterrupt:
             pass
-        finally:
-            if cell.startswith('#!'):
-                self._ssh.exec_command('rm ~/.slurm.magic')
 
 
 def load_ipython_extension(ipython):
