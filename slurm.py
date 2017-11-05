@@ -4,6 +4,7 @@ import datetime
 import getpass
 import os
 import platform
+import stat
 import sys
 import time
 import timeit
@@ -180,20 +181,49 @@ class Slurm(magic.Magics):
 
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
+        def get(sftp, remote, local, resume=False):
+            try:
+                if not resume or (os.stat(local)[stat.ST_MTIME] != sftp.stat(remote).st_mtime):
+                    raise IOError
+            except IOError:
+                sftp.get(remote, local)
+                stats = sftp.stat(remote)
+                os.utime(local, (stats.st_atime, stats.st_mtime))
+
+        def put(sftp, local, remote, resume=False):
+            try:
+                if not resume or (os.stat(local)[stat.ST_MTIME] != sftp.stat(remote).st_mtime):
+                    raise IOError
+            except IOError:
+                sftp.put(local, remote)
+                stats = os.stat(local)
+                sftp.utime(remote, (stats.st_atime, stats.st_mtime))
+
+        def walk(sftp, remote):
+            dirnames, filenames = [], []
+            for f in sftp.listdir_attr(remote):
+                if stat.S_ISDIR(f.st_mode):
+                    dirnames.append(f.filename)
+                else:
+                    filenames.append(f.filename)
+            yield remote, dirnames, filenames
+            for dirname in dirnames:
+                for x in walk(sftp, '{}/{}'.format(remote, dirname)):
+                    yield x
+
         if self._ssh is None:
             raise paramiko.AuthenticationException('Please login using %slogin')
-        opts, _ = self.parse_options(line, 'pi:', 'progress', 'instructions=')
-        hidden = 'progress' not in opts
+        opts, _ = self.parse_options(line, 'i:', 'instructions=')
         instructions = opts.get('i', '') or opts.get('instructions', '')
-        instructions = instructions.splitlines()
+        lines = instructions.splitlines()
         if cell is not None:
-            instructions += cell.splitlines()
+            lines += cell.splitlines()
         ssh = self._ssh if self._ssh_data is None else self._ssh_data
         sftp = ssh.open_sftp()
         sftp.chdir(ssh.exec_command('pwd', verbose=False)[0][0])
         try:
-            for l in progress.iterator(instructions, hidden=hidden or len(instructions) == 0):
-                argv = l.split()
+            for line in progress.iterator(lines, hidden=not bool(instructions)):
+                argv = line.split()
                 if not argv:
                     continue
                 if argv[0].startswith('#'):
@@ -218,16 +248,64 @@ class Slurm(magic.Magics):
                     'symlink': 'symlink'}
                 if argv[0] in commands:
                     command = commands[argv[0]]
-                    if argv[0] in ('lls', 'lpwd'):
-                        output = getattr(os, command)(*argv[1:])
-                    elif argv[0] in ('get', 'put') and '-a' in argv[1:]:
-                        argv.remove('-a')
-                        local, remote = (argv[1], argv[2]) if argv[0] == 'put' else (argv[2], argv[1])
-                        try:
-                            if os.stat(local).st_size != sftp.stat(remote).st_size:
-                                raise IOError
-                        except IOError:
-                            output = getattr(sftp, command)(*argv[1:])
+                    if argv[0] == 'get':
+                        recurse, resume, verbose = False, False, False
+                        for arg in list(argv):
+                            if arg.startswith('-'):
+                                recurse |= 'r' in arg
+                                resume |= 'a' in arg
+                                verbose |= 'v' in arg
+                                argv.remove(arg)
+                        local, remote = argv[2], argv[1]
+                        if stat.S_ISDIR(sftp.stat(remote).st_mode):
+                            if not recurse:
+                                raise RuntimeError('Use -r to recursively copy directories')
+                            if verbose:
+                                pbar = progress.ProgressBar(sum(len(filenames) for _, _, filenames in walk(sftp, remote)))
+                            for dirpath, _, filenames in walk(sftp, remote):
+                                root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
+                                try:
+                                    os.mkdir(root)
+                                except OSError:
+                                    pass
+                                for filename in filenames:
+                                    get(sftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume)
+                                    if verbose:
+                                        pbar.increment()
+                            if verbose:
+                                pbar.done()
+                        else:
+                            get(sftp, remote, local, resume)
+                    elif argv[0] == 'put':
+                        recurse, resume, verbose = False, False, False
+                        for arg in list(argv):
+                            if arg.startswith('-'):
+                                recurse |= 'r' in arg
+                                resume |= 'a' in arg
+                                verbose |= 'v' in arg
+                                argv.remove(arg)
+                        local, remote = argv[1], argv[2]
+                        if os.path.isdir(local):
+                            if not recurse:
+                                raise RuntimeError('Use -r to recursively copy directories')
+                            if verbose:
+                                pbar = progress.ProgressBar(sum(len(filenames) for _, _, filenames in os.walk(local)))
+                            for dirpath, _, filenames in os.walk(local):
+                                root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
+                                try:
+                                    sftp.mkdir(root)
+                                except OSError:
+                                    pass
+                                for filename in filenames:
+                                    put(sftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume)
+                                    if verbose:
+                                        pbar.increment()
+                            if verbose:
+                                pbar.done()
+                        else:
+                            put(sftp, local, remote, resume)
+                    elif argv[0] in ('lls', 'lpwd'):
+                        output = getattr(sftp, command)(*argv[1:])
                     else:
                         output = getattr(sftp, command)(*argv[1:])
                     if command == 'getcwd':
