@@ -1,3 +1,5 @@
+# TODO(auneri1) Tail length should be configurable in sbatch.
+
 from __future__ import absolute_import, division, print_function
 
 import datetime
@@ -119,7 +121,7 @@ class Slurm(magic.Magics):
                     details = dict(line.split('=', 1) for line in '\n'.join(stdouts).split())
                     clear_output(wait=True)
                     if tail and details['JobState'] in ('RUNNING', 'COMPLETING', 'COMPLETED'):
-                        self._ssh.exec_command('tail --lines=5 {}'.format(details['StdOut']))
+                        self._ssh.exec_command('tail --lines=10 {}'.format(details['StdOut']))
                     else:
                         for key in keys:
                             print('{1:>{0}}: {2}'.format(fill, key, details[key]))
