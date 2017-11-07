@@ -1,3 +1,7 @@
+# TODO(auneri1) Non-recursive sftp get/put should copy immediate children.
+# TODO(auneri1) Expand user in sftp magic, work with quotes.
+# TODO(auneri1) Dry run option (-d) for sftp get/put.
+# TODO(auneri1) Recursive option for sftp rm.
 # TODO(auneri1) Tail length should be configurable in sbatch.
 
 from __future__ import absolute_import, division, print_function
@@ -18,6 +22,16 @@ from six import print_ as print
 from six.moves import input
 
 from PythonTools import distributed, progress
+
+
+def get(ftp, remote, local, resume=False):
+    try:
+        if not resume or (os.stat(local)[stat.ST_MTIME] != ftp.stat(remote).st_mtime):
+            raise IOError
+    except IOError:
+        ftp.get(remote, local)
+        stats = ftp.stat(remote)
+        os.utime(local, (stats.st_atime, stats.st_mtime))
 
 
 def interact(channel):
@@ -70,6 +84,29 @@ def interact(channel):
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, tty_prev)
 
 
+def put(ftp, local, remote, resume=False):
+    try:
+        if not resume or (os.stat(local)[stat.ST_MTIME] != ftp.stat(remote).st_mtime):
+            raise IOError
+    except IOError:
+        ftp.put(local, remote)
+        stats = os.stat(local)
+        ftp.utime(remote, (stats.st_atime, stats.st_mtime))
+
+
+def walk(ftp, remote):
+    dirnames, filenames = [], []
+    for f in ftp.listdir_attr(remote):
+        if stat.S_ISDIR(f.st_mode):
+            dirnames.append(f.filename)
+        else:
+            filenames.append(f.filename)
+    yield remote, dirnames, filenames
+    for dirname in dirnames:
+        for x in walk(ftp, '{}/{}'.format(remote, dirname)):
+            yield x
+
+
 @magic.magics_class
 class Slurm(magic.Magics):
 
@@ -85,6 +122,54 @@ class Slurm(magic.Magics):
     def __repr__(self):
         if self._ssh is not None:
             return 'Logged in to {}'.format(self._ssh.get_server())
+
+    @magic.needs_local_scope
+    @magic.cell_magic
+    def sbash(self, line='', cell=None):
+        if self._ssh is None:
+            raise paramiko.AuthenticationException('Please login using %slogin')
+        opts, _ = self.parse_options(line, 'p:t:so:se:', 'period=', 'timeout=', 'stdout=', 'stderr=')
+        stdout = opts.get('so', None) or opts.get('stdout', None)
+        stderr = opts.get('se', None) or opts.get('stderr', None)
+        period = opts.get('p', None) or opts.get('period', None)
+        timeout = opts.get('t', None) or opts.get('timeout', None)
+        if period is not None:
+            period = float(period)
+        if timeout is not None:
+            timeout = float(timeout)
+        cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines())
+        shebangs = [i for i, l in enumerate(cell.splitlines()) if l.startswith('#!')]
+        if len(shebangs) == 0:
+            command = '\n'.join(cell.splitlines())
+        elif len(shebangs) == 1:
+            command = '\n'.join(cell.splitlines()[:shebangs[0]])
+            script = '\n'.join(cell.splitlines()[shebangs[0]:])
+            self._ssh.exec_command('mkdir -p ~/.magic'.format(script))
+            self._ssh.exec_command('echo -e "{}" > ~/.magic/sbash'.format(script))
+            self._ssh.exec_command('chmod +x ~/.magic/sbash')
+            command = '\n'.join((command, '~/.magic/sbash'))
+        else:
+            raise NotImplementedError
+        start = timeit.default_timer()
+        try:
+            while True:
+                clear_output(wait=True)
+                stdouts, stderrs = self._ssh.exec_command(command, verbose=stdout is None and stderr is None)
+                elapsed = timeit.default_timer() - start
+                if timeout is not None and elapsed > timeout:
+                    print('\nsbash terminated after {:.1f} seconds'.format(elapsed))
+                    break
+                if period is not None:
+                    time.sleep(period)
+                else:
+                    break
+        except KeyboardInterrupt:
+            pass
+        else:
+            if stdout is not None:
+                self.shell.user_ns.update({stdout: stdouts})
+            if stderr is not None:
+                self.shell.user_ns.update({stderr: stderrs})
 
     @magic.cell_magic
     def sbatch(self, line='', cell=None):
@@ -131,88 +216,12 @@ class Slurm(magic.Magics):
                 self._ssh.exec_command('scancel {}'.format(job))
 
     @magic.line_magic
-    def sinteract(self, line=''):
-        channel = self._ssh.invoke_shell()
-        interact(channel)
-        channel.close()
-
-    @magic.line_magic
-    def slogin(self, line=''):
-        opts, _ = self.parse_options(line, 's:u:p:d:', 'server=', 'username=', 'password=', 'data-server=')
-        server = opts.get('s', None) or opts.get('server', None)
-        username = opts.get('u', None) or opts.get('username', None)
-        password = opts.get('p', None) or opts.get('password', None)
-        server_data = opts.get('d', None) or opts.get('data-server', None)
-        if server is None:
-            server = input('Server: ')
-        if username is None:
-            username = getpass.getuser()
-        if server_data is not None:
-            try:
-                print('Logging in to {}@{}'.format(username, server_data))
-                self._ssh_data = distributed.SSHClient()
-                self._ssh_data.connect(server_data, username, password, allow_agent=False, look_for_keys=False)
-                self._ssh_data.get_transport().set_keepalive(30)
-                print('Please wait for a new verification code before logging in to {}!'.format(server))
-            except:
-                self._ssh_data = None
-                raise
-        try:
-            print('Logging in to {}@{}'.format(username, server))
-            self._ssh = distributed.SSHClient()
-            self._ssh.connect(server, username, password, allow_agent=False, look_for_keys=False)
-            self._ssh.get_transport().set_keepalive(30)
-        except:
-            self._ssh = None
-            raise
-        return self
-
-    @magic.line_magic
-    def slogout(self, line=''):
-        if self._ssh is not None:
-            print('Logging out of {}'.format(self._ssh.get_server()))
-        self._ssh = None
-        if self._ssh_data is not None:
-            print('Logging out of {}'.format(self._ssh_data.get_server()))
-        self._ssh_data = None
-
-    @magic.line_magic
     @magic.cell_magic
-    def ssftp(self, line='', cell=None):
+    def sftp(self, line='', cell=None):
         """Commands: cd, chmod, chown, get, lls, ln, lpwd, ls, mkdir, put, pwd, reget, rename, reput, rm, rmdir, symlink.
 
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
-        def get(sftp, remote, local, resume=False):
-            try:
-                if not resume or (os.stat(local)[stat.ST_MTIME] != sftp.stat(remote).st_mtime):
-                    raise IOError
-            except IOError:
-                sftp.get(remote, local)
-                stats = sftp.stat(remote)
-                os.utime(local, (stats.st_atime, stats.st_mtime))
-
-        def put(sftp, local, remote, resume=False):
-            try:
-                if not resume or (os.stat(local)[stat.ST_MTIME] != sftp.stat(remote).st_mtime):
-                    raise IOError
-            except IOError:
-                sftp.put(local, remote)
-                stats = os.stat(local)
-                sftp.utime(remote, (stats.st_atime, stats.st_mtime))
-
-        def walk(sftp, remote):
-            dirnames, filenames = [], []
-            for f in sftp.listdir_attr(remote):
-                if stat.S_ISDIR(f.st_mode):
-                    dirnames.append(f.filename)
-                else:
-                    filenames.append(f.filename)
-            yield remote, dirnames, filenames
-            for dirname in dirnames:
-                for x in walk(sftp, '{}/{}'.format(remote, dirname)):
-                    yield x
-
         if self._ssh is None:
             raise paramiko.AuthenticationException('Please login using %slogin')
         opts, _ = self.parse_options(line, 'i:', 'instructions=')
@@ -221,8 +230,8 @@ class Slurm(magic.Magics):
         if cell is not None:
             lines += cell.splitlines()
         ssh = self._ssh if self._ssh_data is None else self._ssh_data
-        sftp = ssh.open_sftp()
-        sftp.chdir(ssh.exec_command('pwd', verbose=False)[0][0])
+        ftp = ssh.open_sftp()
+        ftp.chdir(ssh.exec_command('pwd', verbose=False)[0][0])
         try:
             for line in progress.iterator(lines, hidden=not bool(instructions)):
                 argv = line.split()
@@ -259,25 +268,25 @@ class Slurm(magic.Magics):
                                 verbose |= 'v' in arg
                                 argv.remove(arg)
                         local, remote = argv[2], argv[1]
-                        if stat.S_ISDIR(sftp.stat(remote).st_mode):
+                        if stat.S_ISDIR(ftp.stat(remote).st_mode):
                             if not recurse:
                                 raise RuntimeError('Use -r to recursively copy directories')
                             if verbose:
-                                pbar = progress.ProgressBar(sum(len(filenames) for _, _, filenames in walk(sftp, remote)))
-                            for dirpath, _, filenames in walk(sftp, remote):
+                                pbar = progress.ProgressBar(sum(len(filenames) for _, _, filenames in walk(ftp, remote)))
+                            for dirpath, _, filenames in walk(ftp, remote):
                                 root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
                                 try:
                                     os.mkdir(root)
                                 except OSError:
                                     pass
                                 for filename in filenames:
-                                    get(sftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume)
+                                    get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume)
                                     if verbose:
                                         pbar.increment()
                             if verbose:
                                 pbar.done()
                         else:
-                            get(sftp, remote, local, resume)
+                            get(ftp, remote, local, resume)
                     elif argv[0] == 'put':
                         recurse, resume, verbose = False, False, False
                         for arg in list(argv):
@@ -295,21 +304,21 @@ class Slurm(magic.Magics):
                             for dirpath, _, filenames in os.walk(local):
                                 root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
                                 try:
-                                    sftp.mkdir(root)
+                                    ftp.mkdir(root)
                                 except OSError:
                                     pass
                                 for filename in filenames:
-                                    put(sftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume)
+                                    put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume)
                                     if verbose:
                                         pbar.increment()
                             if verbose:
                                 pbar.done()
                         else:
-                            put(sftp, local, remote, resume)
+                            put(ftp, local, remote, resume)
                     elif argv[0] in ('lls', 'lpwd'):
-                        output = getattr(sftp, command)(*argv[1:])
+                        output = getattr(ftp, command)(*argv[1:])
                     else:
-                        output = getattr(sftp, command)(*argv[1:])
+                        output = getattr(ftp, command)(*argv[1:])
                     if command == 'getcwd':
                         print(output)
                     elif command == 'listdir':
@@ -319,55 +328,53 @@ class Slurm(magic.Magics):
         except KeyboardInterrupt:
             pass
         finally:
-            sftp.close()
+            ftp.close()
 
-    @magic.needs_local_scope
-    @magic.cell_magic
-    def sshell(self, line='', cell=None):
-        if self._ssh is None:
-            raise paramiko.AuthenticationException('Please login using %slogin')
-        opts, _ = self.parse_options(line, 'p:t:so:se:', 'period=', 'timeout=', 'stdout=', 'stderr=')
-        stdout = opts.get('so', None) or opts.get('stdout', None)
-        stderr = opts.get('se', None) or opts.get('stderr', None)
-        period = opts.get('p', None) or opts.get('period', None)
-        timeout = opts.get('t', None) or opts.get('timeout', None)
-        if period is not None:
-            period = float(period)
-        if timeout is not None:
-            timeout = float(timeout)
-        cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines())
-        shebangs = [i for i, l in enumerate(cell.splitlines()) if l.startswith('#!')]
-        if len(shebangs) == 0:
-            command = '\n'.join(cell.splitlines())
-        elif len(shebangs) == 1:
-            command = '\n'.join(cell.splitlines()[:shebangs[0]])
-            script = '\n'.join(cell.splitlines()[shebangs[0]:])
-            self._ssh.exec_command('mkdir -p ~/.magic'.format(script))
-            self._ssh.exec_command('echo -e "{}" > ~/.magic/sshell'.format(script))
-            self._ssh.exec_command('chmod +x ~/.magic/sshell')
-            command = '\n'.join((command, '~/.magic/sshell'))
-        else:
-            raise NotImplementedError
-        start = timeit.default_timer()
+    @magic.line_magic
+    def sinteract(self, line=''):
+        channel = self._ssh.invoke_shell()
+        interact(channel)
+        channel.close()
+
+    @magic.line_magic
+    def slogin(self, line=''):
+        opts, _ = self.parse_options(line, 's:u:p:d:', 'server=', 'username=', 'password=', 'data-server=')
+        server = opts.get('s', None) or opts.get('server', None)
+        username = opts.get('u', None) or opts.get('username', None)
+        password = opts.get('p', None) or opts.get('password', None)
+        server_data = opts.get('d', None) or opts.get('data-server', None)
+        if server is None:
+            server = input('Server: ')
+        if username is None:
+            username = getpass.getuser()
+        if server_data is not None:
+            try:
+                print('Logging in to {}@{}'.format(username, server_data))
+                self._ssh_data = distributed.SSHClient()
+                self._ssh_data.connect(server_data, username, password, allow_agent=False, look_for_keys=False)
+                self._ssh_data.get_transport().set_keepalive(30)
+                print('Please wait for a new verification code before logging in to {}!'.format(server))
+            except:  # noqa: E722
+                self._ssh_data = None
+                raise
         try:
-            while True:
-                clear_output(wait=True)
-                stdouts, stderrs = self._ssh.exec_command(command, verbose=stdout is None and stderr is None)
-                elapsed = timeit.default_timer() - start
-                if timeout is not None and elapsed > timeout:
-                    print('\nsshell terminated after {:.1f} seconds'.format(elapsed))
-                    break
-                if period is not None:
-                    time.sleep(period)
-                else:
-                    break
-        except KeyboardInterrupt:
-            pass
-        else:
-            if stdout is not None:
-                self.shell.user_ns.update({stdout: stdouts})
-            if stderr is not None:
-                self.shell.user_ns.update({stderr: stderrs})
+            print('Logging in to {}@{}'.format(username, server))
+            self._ssh = distributed.SSHClient()
+            self._ssh.connect(server, username, password, allow_agent=False, look_for_keys=False)
+            self._ssh.get_transport().set_keepalive(30)
+        except:  # noqa: E722
+            self._ssh = None
+            raise
+        return self
+
+    @magic.line_magic
+    def slogout(self, line=''):
+        if self._ssh is not None:
+            print('Logging out of {}'.format(self._ssh.get_server()))
+        self._ssh = None
+        if self._ssh_data is not None:
+            print('Logging out of {}'.format(self._ssh_data.get_server()))
+        self._ssh_data = None
 
 
 def load_ipython_extension(ipython):
