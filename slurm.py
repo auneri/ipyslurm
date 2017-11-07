@@ -137,11 +137,11 @@ class Slurm(magic.Magics):
             period = float(period)
         if timeout is not None:
             timeout = float(timeout)
-        cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines())
         shebangs = [i for i, l in enumerate(cell.splitlines()) if l.startswith('#!')]
         if len(shebangs) == 0:
             command = '\n'.join(cell.splitlines())
         elif len(shebangs) == 1:
+            cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines() if not l.startswith('#SBATCH'))
             command = '\n'.join(cell.splitlines()[:shebangs[0]])
             script = '\n'.join(cell.splitlines()[shebangs[0]:])
             self._ssh.exec_command('mkdir -p ~/.magic'.format(script))
