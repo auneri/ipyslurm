@@ -233,7 +233,7 @@ class Slurm(magic.Magics):
         ftp = ssh.open_sftp()
         ftp.chdir(ssh.exec_command('pwd', verbose=False)[0][0])
         try:
-            for line in progress.iterator(lines, hidden=not bool(instructions)):
+            for line in progress.iterator(lines, show=bool(instructions)):
                 argv = line.split()
                 if not argv:
                     continue
