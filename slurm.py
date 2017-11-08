@@ -272,6 +272,8 @@ class Slurm(magic.Magics):
                                 resume |= 'a' in arg
                                 verbose |= 'v' in arg
                                 argv.remove(arg)
+                        if len(argv) != 3:
+                            raise ValueError('get [-drav] remote_file local_file')
                         local, remote = argv[2], argv[1]
                         if stat.S_ISDIR(ftp.stat(remote).st_mode):
                             if verbose:
@@ -301,6 +303,8 @@ class Slurm(magic.Magics):
                                 resume |= 'a' in arg
                                 verbose |= 'v' in arg
                                 argv.remove(arg)
+                        if len(argv) != 3:
+                            raise ValueError('put [-drav] local_file remote_file')
                         local, remote = argv[1], argv[2]
                         if os.path.isdir(local):
                             if verbose:
