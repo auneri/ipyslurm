@@ -351,7 +351,7 @@ class Slurm(magic.Magics):
             try:
                 print('Logging in to {}@{}'.format(username, server_data))
                 self._ssh_data = distributed.SSHClient()
-                self._ssh_data.connect(server_data, username, password, allow_agent=False, look_for_keys=False)
+                self._ssh_data.connect(server_data, username, password)
                 self._ssh_data.get_transport().set_keepalive(30)
                 print('Please wait for a new verification code before logging in to {}!'.format(server))
             except:  # noqa: E722
@@ -360,7 +360,7 @@ class Slurm(magic.Magics):
         try:
             print('Logging in to {}@{}'.format(username, server))
             self._ssh = distributed.SSHClient()
-            self._ssh.connect(server, username, password, allow_agent=False, look_for_keys=False)
+            self._ssh.connect(server, username, password)
             self._ssh.get_transport().set_keepalive(30)
         except:  # noqa: E722
             self._ssh = None
