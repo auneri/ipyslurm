@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import datetime
 import getpass
+import importlib
 import os
 import platform
 import stat
@@ -222,7 +223,7 @@ class Slurm(magic.Magics):
     @magic.line_magic
     @magic.cell_magic
     def sftp(self, line='', cell=None):
-        """Commands: cd, chmod, chown, get, lls, ln, lpwd, ls, mkdir, put, pwd, reget, rename, reput, rm, rmdir, symlink.
+        """Commands: cd, chmod, chown, get, lls, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
 
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
@@ -249,15 +250,14 @@ class Slurm(magic.Magics):
                     'chown': 'chown',
                     'get': 'get',
                     'lls': 'listdir',
+                    'lmkdir': 'os.mkdir',
                     'ln': 'symlink',
                     'lpwd': 'getcwd',
                     'ls': 'listdir',
                     'mkdir': 'mkdir',
                     'put': 'put',
                     'pwd': 'getcwd',
-                    'reget': 'get',
                     'rename': 'rename',
-                    'reput': 'put',
                     'rm': 'remove',
                     'rmdir': 'rmdir',
                     'symlink': 'symlink'}
@@ -327,6 +327,8 @@ class Slurm(magic.Magics):
                             put(ftp, local, remote, resume, dryrun)
                     elif argv[0] in ('lls', 'lpwd'):
                         output = getattr(ftp, command)(*argv[1:])
+                    elif argv[0] == 'lmkdir':
+                        getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
                     else:
                         output = getattr(ftp, command)(*argv[1:])
                     if command == 'getcwd':
