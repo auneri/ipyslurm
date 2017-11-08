@@ -1,4 +1,3 @@
-# TODO(auneri1) Non-recursive sftp get/put should copy immediate children.
 # TODO(auneri1) Expand user in sftp magic, work with quotes.
 # TODO(auneri1) Dry run option (-d) for sftp get/put.
 # TODO(auneri1) Recursive option for sftp rm.
@@ -269,10 +268,8 @@ class Slurm(magic.Magics):
                                 argv.remove(arg)
                         local, remote = argv[2], argv[1]
                         if stat.S_ISDIR(ftp.stat(remote).st_mode):
-                            if not recurse:
-                                raise RuntimeError('Use -r to recursively copy directories')
                             if verbose:
-                                pbar = progress.ProgressBar(sum(len(filenames) for _, _, filenames in walk(ftp, remote)))
+                                pbar = progress.ProgressBar(sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0))
                             for dirpath, _, filenames in walk(ftp, remote):
                                 root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
                                 try:
@@ -283,6 +280,8 @@ class Slurm(magic.Magics):
                                     get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume)
                                     if verbose:
                                         pbar.increment()
+                                if not recurse:
+                                    break
                             if verbose:
                                 pbar.done()
                         else:
@@ -297,10 +296,8 @@ class Slurm(magic.Magics):
                                 argv.remove(arg)
                         local, remote = argv[1], argv[2]
                         if os.path.isdir(local):
-                            if not recurse:
-                                raise RuntimeError('Use -r to recursively copy directories')
                             if verbose:
-                                pbar = progress.ProgressBar(sum(len(filenames) for _, _, filenames in os.walk(local)))
+                                pbar = progress.ProgressBar(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0))
                             for dirpath, _, filenames in os.walk(local):
                                 root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
                                 try:
@@ -311,6 +308,8 @@ class Slurm(magic.Magics):
                                     put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume)
                                     if verbose:
                                         pbar.increment()
+                                if not recurse:
+                                    break
                             if verbose:
                                 pbar.done()
                         else:
