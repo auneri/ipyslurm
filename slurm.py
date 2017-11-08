@@ -1,5 +1,4 @@
 # TODO(auneri1) Expand user in sftp magic, work with quotes.
-# TODO(auneri1) Dry run option (-d) for sftp get/put.
 # TODO(auneri1) Recursive option for sftp rm.
 # TODO(auneri1) Tail length should be configurable in sbatch.
 
@@ -23,14 +22,17 @@ from six.moves import input
 from PythonTools import distributed, progress
 
 
-def get(ftp, remote, local, resume=False):
+def get(ftp, remote, local, resume=False, dryrun=False):
     try:
         if not resume or (os.stat(local)[stat.ST_MTIME] != ftp.stat(remote).st_mtime):
             raise IOError
     except IOError:
-        ftp.get(remote, local)
-        stats = ftp.stat(remote)
-        os.utime(local, (stats.st_atime, stats.st_mtime))
+        if dryrun:
+            print('get {} {}'.format(remote, local))
+        else:
+            ftp.get(remote, local)
+            stats = ftp.stat(remote)
+            os.utime(local, (stats.st_atime, stats.st_mtime))
 
 
 def interact(channel):
@@ -83,14 +85,17 @@ def interact(channel):
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, tty_prev)
 
 
-def put(ftp, local, remote, resume=False):
+def put(ftp, local, remote, resume=False, dryrun=False):
     try:
         if not resume or (os.stat(local)[stat.ST_MTIME] != ftp.stat(remote).st_mtime):
             raise IOError
     except IOError:
-        ftp.put(local, remote)
-        stats = os.stat(local)
-        ftp.utime(remote, (stats.st_atime, stats.st_mtime))
+        if dryrun:
+            print('put {} {}'.format(local, remote))
+        else:
+            ftp.put(local, remote)
+            stats = os.stat(local)
+            ftp.utime(remote, (stats.st_atime, stats.st_mtime))
 
 
 def walk(ftp, remote):
@@ -259,9 +264,10 @@ class Slurm(magic.Magics):
                 if argv[0] in commands:
                     command = commands[argv[0]]
                     if argv[0] == 'get':
-                        recurse, resume, verbose = False, False, False
+                        dryrun, recurse, resume, verbose = False, False, False, False
                         for arg in list(argv):
                             if arg.startswith('-'):
+                                dryrun |= 'd' in arg
                                 recurse |= 'r' in arg
                                 resume |= 'a' in arg
                                 verbose |= 'v' in arg
@@ -277,7 +283,7 @@ class Slurm(magic.Magics):
                                 except OSError:
                                     pass
                                 for filename in filenames:
-                                    get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume)
+                                    get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume, dryrun)
                                     if verbose:
                                         pbar.increment()
                                 if not recurse:
@@ -285,11 +291,12 @@ class Slurm(magic.Magics):
                             if verbose:
                                 pbar.done()
                         else:
-                            get(ftp, remote, local, resume)
+                            get(ftp, remote, local, resume, dryrun)
                     elif argv[0] == 'put':
-                        recurse, resume, verbose = False, False, False
+                        dryrun, recurse, resume, verbose = False, False, False, False
                         for arg in list(argv):
                             if arg.startswith('-'):
+                                dryrun |= 'd' in arg
                                 recurse |= 'r' in arg
                                 resume |= 'a' in arg
                                 verbose |= 'v' in arg
@@ -305,7 +312,7 @@ class Slurm(magic.Magics):
                                 except OSError:
                                     pass
                                 for filename in filenames:
-                                    put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume)
+                                    put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume, dryrun)
                                     if verbose:
                                         pbar.increment()
                                 if not recurse:
@@ -313,7 +320,7 @@ class Slurm(magic.Magics):
                             if verbose:
                                 pbar.done()
                         else:
-                            put(ftp, local, remote, resume)
+                            put(ftp, local, remote, resume, dryrun)
                     elif argv[0] in ('lls', 'lpwd'):
                         output = getattr(ftp, command)(*argv[1:])
                     else:
