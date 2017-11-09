@@ -229,7 +229,9 @@ class Slurm(magic.Magics):
         """
         if self._ssh is None:
             raise paramiko.AuthenticationException('Please login using %slogin')
-        opts, _ = self.parse_options(line, 'i:', 'instructions=')
+        opts, _ = self.parse_options(line, 'vdi:', 'verbose', 'dryrun', 'instructions=')
+        verbose = 'v' in opts or 'verbose' in opts
+        dryrun = 'd' in opts or 'dryrun' in opts
         instructions = opts.get('i', '') or opts.get('instructions', '')
         lines = instructions.splitlines()
         if cell is not None:
@@ -238,7 +240,7 @@ class Slurm(magic.Magics):
         ftp = ssh.open_sftp()
         ftp.chdir(ssh.exec_command('pwd', verbose=False)[0][0])
         try:
-            for line in progress.iterator(lines, show=bool(instructions)):
+            for line in progress.iterator(lines, show=verbose and instructions):
                 argv = line.split()
                 if not argv:
                     continue
@@ -264,13 +266,11 @@ class Slurm(magic.Magics):
                 if argv[0] in commands:
                     command = commands[argv[0]]
                     if argv[0] == 'get':
-                        dryrun, recurse, resume, verbose = False, False, False, False
+                        recurse, resume = False, False
                         for arg in list(argv):
                             if arg.startswith('-'):
-                                dryrun |= 'd' in arg
                                 recurse |= 'r' in arg
                                 resume |= 'a' in arg
-                                verbose |= 'v' in arg
                                 argv.remove(arg)
                         if len(argv) != 3:
                             raise ValueError('get [-drav] remote_file local_file')
@@ -295,13 +295,11 @@ class Slurm(magic.Magics):
                         else:
                             get(ftp, remote, local, resume, dryrun)
                     elif argv[0] == 'put':
-                        dryrun, recurse, resume, verbose = False, False, False, False
+                        recurse, resume = False, False
                         for arg in list(argv):
                             if arg.startswith('-'):
-                                dryrun |= 'd' in arg
                                 recurse |= 'r' in arg
                                 resume |= 'a' in arg
-                                verbose |= 'v' in arg
                                 argv.remove(arg)
                         if len(argv) != 3:
                             raise ValueError('put [-drav] local_file remote_file')
@@ -326,14 +324,23 @@ class Slurm(magic.Magics):
                         else:
                             put(ftp, local, remote, resume, dryrun)
                     elif argv[0] in ('lls', 'lpwd'):
-                        output = getattr(ftp, command)(*argv[1:])
+                        if dryrun:
+                            print(' '.join(argv))
+                        else:
+                            output = getattr(ftp, command)(*argv[1:])
                     elif argv[0] == 'lmkdir':
-                        getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
+                        if dryrun:
+                            print(' '.join(argv))
+                        else:
+                            getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
                     else:
-                        output = getattr(ftp, command)(*argv[1:])
-                    if command == 'getcwd':
+                        if dryrun:
+                            print(' '.join(argv))
+                        else:
+                            output = getattr(ftp, command)(*argv[1:])
+                    if command == 'getcwd' and not dryrun:
                         print(output)
-                    elif command == 'listdir':
+                    elif command == 'listdir' and not dryrun:
                         print('\n'.join(sorted(output)))
                 else:
                     raise SyntaxError('Command "{}" is not supported'.format(argv[0]))
