@@ -9,6 +9,7 @@ import getpass
 import importlib
 import os
 import platform
+import re
 import stat
 import sys
 import time
@@ -197,6 +198,12 @@ class Slurm(magic.Magics):
             command = '\n'.join((command, '~/.magic/sbatch_{}'.format(timestamp)))
         else:
             raise NotImplementedError
+        while True:
+            match = re.search('\{(.+?)\}', line)
+            if not match:
+                break
+            stdouts, _ = self._ssh.exec_command(match.group(1), verbose=False)
+            line = re.sub('\{(.+?)\}', '\n'.join(stdouts), line, count=1)
         stdouts, _ = self._ssh.exec_command('sbatch {} --wrap="{}"'.format(line, command))
         if stdouts and stdouts[-1].startswith('Submitted batch job '):
             job = int(stdouts[-1].lstrip('Submitted batch job '))
