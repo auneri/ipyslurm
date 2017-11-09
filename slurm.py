@@ -366,16 +366,6 @@ class Slurm(magic.Magics):
             server = input('Server: ')
         if username is None:
             username = getpass.getuser()
-        if server_data is not None:
-            try:
-                print('Logging in to {}@{}'.format(username, server_data))
-                self._ssh_data = distributed.SSHClient()
-                self._ssh_data.connect(server_data, username, password)
-                self._ssh_data.get_transport().set_keepalive(30)
-                print('Please wait for a new verification code before logging in to {}!'.format(server))
-            except:  # noqa: E722
-                self._ssh_data = None
-                raise
         try:
             print('Logging in to {}@{}'.format(username, server))
             self._ssh = distributed.SSHClient()
@@ -384,6 +374,17 @@ class Slurm(magic.Magics):
         except:  # noqa: E722
             self._ssh = None
             raise
+        if server_data is not None:
+            try:
+                sys.stdout.flush()
+                print('Please wait for a new verification code before logging in to {}'.format(server_data), file=sys.stderr, flush=True)
+                print('Logging in to {}@{}'.format(username, server_data))
+                self._ssh_data = distributed.SSHClient()
+                self._ssh_data.connect(server_data, username, password)
+                self._ssh_data.get_transport().set_keepalive(30)
+            except:  # noqa: E722
+                self._ssh_data = None
+                raise
         return self
 
     @magic.line_magic
