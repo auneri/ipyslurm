@@ -210,19 +210,19 @@ class Slurm(magic.Magics):
         else:
             job = None
         if job is not None and (wait or tail):
-            keys = 'JobId', 'JobName', 'JobState', 'SubmitTime', 'StartTime', 'RunTime'
+            keys = 'JobName', 'JobId', 'JobState', 'SubmitTime', 'StartTime', 'RunTime'
             fill = max(len(i) for i in keys)
             try:
                 while True:
                     stdouts, _ = self._ssh.exec_command('scontrol show jobid {}'.format(job), verbose=False)
                     details = dict(line.split('=', 1) for line in '\n'.join(stdouts).split())
                     clear_output(wait=True)
-                    if tail and details['JobState'] in ('RUNNING', 'COMPLETING', 'COMPLETED'):
+                    if tail and details['JobState'] in ['RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED']:
                         self._ssh.exec_command('tail --lines=10 {}'.format(details['StdOut']))
                     else:
                         for key in keys:
                             print('{1:>{0}}: {2}'.format(fill, key, details[key]))
-                    if details['JobState'] not in ('PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING'):
+                    if details['JobState'] not in ['PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING']:
                         break
             except KeyboardInterrupt:
                 self._ssh.exec_command('scancel {}'.format(job))
