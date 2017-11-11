@@ -146,7 +146,7 @@ class Slurm(magic.Magics):
         if len(shebangs) == 0:
             command = '\n'.join(cell.splitlines())
         elif len(shebangs) == 1:
-            cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines() if not l.startswith('#SBATCH'))
+            cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines())
             command = '\n'.join(cell.splitlines()[:shebangs[0]])
             script = '\n'.join(cell.splitlines()[shebangs[0]:])
             self._ssh.exec_command('mkdir -p ~/.magic'.format(script))
@@ -154,7 +154,7 @@ class Slurm(magic.Magics):
             self._ssh.exec_command('chmod +x ~/.magic/sbash')
             command = '\n'.join((command, '~/.magic/sbash'))
         else:
-            raise NotImplementedError
+            raise NotImplementedError('Multiple shebangs are not supported')
         start = timeit.default_timer()
         try:
             while True:
@@ -200,12 +200,14 @@ class Slurm(magic.Magics):
             self._ssh.exec_command('chmod +x ~/.magic/sbatch_{}'.format(timestamp))
             command = '\n'.join((command, '~/.magic/sbatch_{}'.format(timestamp)))
         else:
-            raise NotImplementedError
+            raise NotImplementedError('Multiple shebangs are not supported')
         while True:
             match = re.search('\{(.+?)\}', args)
             if not match:
                 break
-            stdouts, _ = self._ssh.exec_command(match.group(1), verbose=False)
+            stdouts, stderrs = self._ssh.exec_command(match.group(1), verbose=False)
+            if stderrs:
+                raise IOError('\n'.join(stderrs))
             args = re.sub('\{(.+?)\}', '\n'.join(stdouts), args, count=1)
         stdouts, _ = self._ssh.exec_command('sbatch {} --wrap="{}"'.format(args, command))
         if stdouts and stdouts[-1].startswith('Submitted batch job '):
