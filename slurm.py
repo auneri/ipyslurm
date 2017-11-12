@@ -1,6 +1,5 @@
 # TODO(auneri1) Expand user in sftp magic, work with quotes.
 # TODO(auneri1) Recursive option for sftp rm.
-# TODO(auneri1) Tail length should be configurable in sbatch.
 
 from __future__ import absolute_import, division, print_function
 
@@ -181,9 +180,13 @@ class Slurm(magic.Magics):
     def sbatch(self, line='', cell=None):
         if self._ssh is None:
             raise paramiko.AuthenticationException('Please login using %slogin')
-        line, wait = line.replace('--wait', ''), '--wait' in line
-        line, tail = line.replace('--tail', ''), '--tail' in line
-        line = ' '.join(l.replace('#SBATCH', '').strip() for l in cell.splitlines() if l.startswith('#SBATCH'))
+        opts, _ = self.parse_options(line, 'wt:a:', 'wait', 'tail=', 'args=')
+        wait = 'w' in opts or 'wait' in opts
+        tail = opts.get('t', None) or opts.get('tail', None)
+        args = opts.get('a', '') or opts.get('args', '')
+        if tail is not None:
+            tail = int(tail)
+        args += ' ' + ' '.join(l.replace('#SBATCH', '').strip() for l in cell.splitlines() if l.startswith('#SBATCH'))
         cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines() if not l.startswith('#SBATCH'))
         shebangs = [i for i, l in enumerate(cell.splitlines()) if l.startswith('#!')]
         if len(shebangs) == 0:
@@ -199,17 +202,17 @@ class Slurm(magic.Magics):
         else:
             raise NotImplementedError
         while True:
-            match = re.search('\{(.+?)\}', line)
+            match = re.search('\{(.+?)\}', args)
             if not match:
                 break
             stdouts, _ = self._ssh.exec_command(match.group(1), verbose=False)
-            line = re.sub('\{(.+?)\}', '\n'.join(stdouts), line, count=1)
-        stdouts, _ = self._ssh.exec_command('sbatch {} --wrap="{}"'.format(line, command))
+            args = re.sub('\{(.+?)\}', '\n'.join(stdouts), args, count=1)
+        stdouts, _ = self._ssh.exec_command('sbatch {} --wrap="{}"'.format(args, command))
         if stdouts and stdouts[-1].startswith('Submitted batch job '):
             job = int(stdouts[-1].lstrip('Submitted batch job '))
         else:
             job = None
-        if job is not None and (wait or tail):
+        if job is not None and (wait or tail is not None):
             keys = 'JobName', 'JobId', 'JobState', 'SubmitTime', 'StartTime', 'RunTime'
             fill = max(len(i) for i in keys)
             try:
@@ -217,8 +220,8 @@ class Slurm(magic.Magics):
                     stdouts, _ = self._ssh.exec_command('scontrol show jobid {}'.format(job), verbose=False)
                     details = dict(line.split('=', 1) for line in '\n'.join(stdouts).split())
                     clear_output(wait=True)
-                    if tail and details['JobState'] in ['RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED']:
-                        self._ssh.exec_command('tail --lines=10 {}'.format(details['StdOut']))
+                    if tail is not None and details['JobState'] in ['RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED']:
+                        self._ssh.exec_command('tail --lines={} {}'.format(tail, details['StdOut']))
                     else:
                         for key in keys:
                             print('{1:>{0}}: {2}'.format(fill, key, details[key]))
