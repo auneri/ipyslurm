@@ -125,7 +125,9 @@ class Slurm(magic.Magics):
         super(Slurm, self).__del__()
 
     def __repr__(self):
-        if self._ssh is not None:
+        if self._ssh is not None and self._ssh_data is not None:
+            return 'Logged in to {} and {}'.format(self._ssh.get_server(), self._ssh_data.get_server())
+        elif self._ssh is not None:
             return 'Logged in to {}'.format(self._ssh.get_server())
 
     @magic.needs_local_scope
