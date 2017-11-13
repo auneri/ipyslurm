@@ -1,4 +1,3 @@
-# TODO(auneri1) Expand user in sftp magic, work with quotes.
 # TODO(auneri1) Recursive option for sftp rm.
 
 from __future__ import absolute_import, division, print_function
@@ -84,6 +83,17 @@ def interact(channel):
                     channel.send('{}\n'.format(stdin))
         finally:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, tty_prev)
+
+
+def normalize(path, ssh=None):
+    if path.startswith('"'):
+        path = path.replace('"', '')
+    elif path.startswith("'"):
+        path = path.replace("'", '')
+    if ssh is None:
+        return os.path.abspath(os.path.expanduser(path))
+    else:
+        return ssh.exec_command('readlink -f {}'.format(path), verbose=False)[0][0]
 
 
 def put(ftp, local, remote, resume=False, dryrun=False):
@@ -288,7 +298,7 @@ class Slurm(magic.Magics):
                                 argv.remove(arg)
                         if len(argv) != 3:
                             raise ValueError('get [-drav] remote_file local_file')
-                        local, remote = argv[2], argv[1]
+                        local, remote = normalize(argv[2]), normalize(argv[1], ssh)
                         if stat.S_ISDIR(ftp.stat(remote).st_mode):
                             if verbose:
                                 pbar = progress.ProgressBar(sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0))
@@ -317,7 +327,7 @@ class Slurm(magic.Magics):
                                 argv.remove(arg)
                         if len(argv) != 3:
                             raise ValueError('put [-drav] local_file remote_file')
-                        local, remote = argv[1], argv[2]
+                        local, remote = normalize(argv[1]), normalize(argv[2], ssh)
                         if os.path.isdir(local):
                             if verbose:
                                 pbar = progress.ProgressBar(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0))
