@@ -1,4 +1,5 @@
-# TODO(auneri1) Recursive option for sftp rm.
+# TODO(auneri1) Recursive option for sftp rm, using bottomup remote walk.
+# TODO(auneri1) Support globbing in sftp get/put.
 
 from __future__ import absolute_import, division, print_function
 
@@ -270,7 +271,6 @@ class Slurm(magic.Magics):
             lines += cell.splitlines()
         ssh = self._ssh if self._ssh_data is None else self._ssh_data
         ftp = ssh.open_sftp()
-        ftp.chdir(ssh.exec_command('pwd', verbose=False)[0][0])
         try:
             for line in progress.iterator(lines, show=verbose and instructions):
                 argv = line.split()
@@ -283,10 +283,10 @@ class Slurm(magic.Magics):
                     'chmod': 'chmod',
                     'chown': 'chown',
                     'get': 'get',
-                    'lls': 'listdir',
+                    'lls': 'os.listdir',
                     'lmkdir': 'os.mkdir',
                     'ln': 'symlink',
-                    'lpwd': 'getcwd',
+                    'lpwd': 'os.getcwd',
                     'ls': 'listdir',
                     'mkdir': 'mkdir',
                     'put': 'put',
@@ -355,25 +355,20 @@ class Slurm(magic.Magics):
                                 pbar.done()
                         else:
                             put(ftp, local, remote, resume, dryrun)
-                    elif argv[0] in ('lls', 'lpwd'):
+                    elif argv[0] in ['lls', 'lmkdir', 'lpwd']:
                         if dryrun:
                             print(' '.join(argv))
                         else:
-                            output = getattr(ftp, command)(*argv[1:])
-                    elif argv[0] == 'lmkdir':
-                        if dryrun:
-                            print(' '.join(argv))
-                        else:
-                            getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
+                            output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
                     else:
                         if dryrun:
                             print(' '.join(argv))
                         else:
                             output = getattr(ftp, command)(*argv[1:])
-                    if command == 'getcwd' and not dryrun:
+                    if argv[0] in ['pwd', 'lpwd'] and not dryrun:
                         print(output)
-                    elif command == 'listdir' and not dryrun:
-                        print('\n'.join(sorted(output)))
+                    elif argv[0] in ['ls', 'lls'] and not dryrun:
+                        print('\n'.join(output))
                 else:
                     raise SyntaxError('Command "{}" is not supported'.format(argv[0]))
         except KeyboardInterrupt:
