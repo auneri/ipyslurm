@@ -24,7 +24,11 @@ from PythonTools import distributed, progress
 
 def get(ftp, remote, local, resume=False, dryrun=False):
     try:
-        if not resume or (os.stat(local)[stat.ST_MTIME] != ftp.stat(remote).st_mtime):
+        if not resume:
+            raise IOError
+        remote_timestamp = datetime.datetime.fromtimestamp(ftp.stat(remote).st_mtime)
+        local_timestamp = datetime.datetime.fromtimestamp(os.stat(local)[stat.ST_MTIME])
+        if remote_timestamp > local_timestamp:
             raise IOError
     except IOError:
         if dryrun:
@@ -98,7 +102,11 @@ def normalize(path, ssh=None):
 
 def put(ftp, local, remote, resume=False, dryrun=False):
     try:
-        if not resume or (os.stat(local)[stat.ST_MTIME] != ftp.stat(remote).st_mtime):
+        if not resume:
+            raise IOError
+        local_timestamp = datetime.datetime.fromtimestamp(os.stat(local)[stat.ST_MTIME])
+        remote_timestamp = datetime.datetime.fromtimestamp(ftp.stat(remote).st_mtime)
+        if local_timestamp > remote_timestamp:
             raise IOError
     except IOError:
         if dryrun:
