@@ -20,7 +20,8 @@ from IPython.display import clear_output
 from six import print_ as print
 from six.moves import input
 
-from PythonTools import distributed, progress
+from PythonTools import progress
+from . import client
 
 
 def get(ftp, remote, local, resume=False, dryrun=False):
@@ -395,7 +396,7 @@ class Slurm(magic.Magics):
             username = getpass.getuser()
         try:
             print('Logging in to {}@{}'.format(username, server))
-            self._ssh = distributed.SSHClient()
+            self._ssh = client.SSHClient()
             self._ssh.connect(server, username, password)
             self._ssh.get_transport().set_keepalive(30)
         except:  # noqa: E722
@@ -406,7 +407,7 @@ class Slurm(magic.Magics):
                 sys.stdout.flush()
                 print('Please wait for a new verification code before logging in to {}'.format(server_data), file=sys.stderr, flush=True)
                 print('Logging in to {}@{}'.format(username, server_data))
-                self._ssh_data = distributed.SSHClient()
+                self._ssh_data = client.SSHClient()
                 self._ssh_data.connect(server_data, username, password)
                 self._ssh_data.get_transport().set_keepalive(30)
             except:  # noqa: E722
