@@ -133,16 +133,16 @@ def walk(ftp, remote):
 
 
 @magic.magics_class
-class Slurm(magic.Magics):
+class IPySlurm(magic.Magics):
 
     def __init__(self, *args, **kwargs):
-        super(Slurm, self).__init__(*args, **kwargs)
+        super(IPySlurm, self).__init__(*args, **kwargs)
         self._ssh = None
         self._ssh_data = None
 
     def __del__(self):
         self.slogout()
-        super(Slurm, self).__del__()
+        super(IPySlurm, self).__del__()
 
     def __repr__(self):
         if self._ssh is not None and self._ssh_data is not None:
@@ -171,10 +171,10 @@ class Slurm(magic.Magics):
             cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines())
             command = '\n'.join(cell.splitlines()[:shebangs[0]])
             script = '\n'.join(cell.splitlines()[shebangs[0]:])
-            self._ssh.exec_command('mkdir -p ~/.magic'.format(script))
-            self._ssh.exec_command('echo -e "{}" > ~/.magic/sbash'.format(script))
-            self._ssh.exec_command('chmod +x ~/.magic/sbash')
-            command = '\n'.join((command, '~/.magic/sbash'))
+            self._ssh.exec_command('mkdir -p ~/.ipyslurm'.format(script))
+            self._ssh.exec_command('echo -e "{}" > ~/.ipyslurm/sbash'.format(script))
+            self._ssh.exec_command('chmod +x ~/.ipyslurm/sbash')
+            command = '\n'.join((command, '~/.ipyslurm/sbash'))
         else:
             raise NotImplementedError('Multiple shebangs are not supported')
         start = timeit.default_timer()
@@ -217,10 +217,10 @@ class Slurm(magic.Magics):
             command = '\n'.join(cell.splitlines()[:shebangs[0]])
             script = '\n'.join(cell.splitlines()[shebangs[0]:])
             timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            self._ssh.exec_command('mkdir -p ~/.magic'.format(script))
-            self._ssh.exec_command('echo -e "{}" > ~/.magic/sbatch_{}'.format(script, timestamp))
-            self._ssh.exec_command('chmod +x ~/.magic/sbatch_{}'.format(timestamp))
-            command = '\n'.join((command, '~/.magic/sbatch_{}'.format(timestamp)))
+            self._ssh.exec_command('mkdir -p ~/.ipyslurm'.format(script))
+            self._ssh.exec_command('echo -e "{}" > ~/.ipyslurm/sbatch_{}'.format(script, timestamp))
+            self._ssh.exec_command('chmod +x ~/.ipyslurm/sbatch_{}'.format(timestamp))
+            command = '\n'.join((command, '~/.ipyslurm/sbatch_{}'.format(timestamp)))
         else:
             raise NotImplementedError('Multiple shebangs are not supported')
         while True:
@@ -416,7 +416,3 @@ class Slurm(magic.Magics):
         if self._ssh_data is not None:
             print('Logging out of {}'.format(self._ssh_data.get_server()))
         self._ssh_data = None
-
-
-def load_ipython_extension(ipython):
-    ipython.register_magics(Slurm)
