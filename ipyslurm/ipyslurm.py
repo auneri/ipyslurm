@@ -19,8 +19,8 @@ from IPython.core import magic
 from IPython.display import clear_output
 from six import print_ as print
 from six.moves import input
+from tqdm import tqdm_notebook
 
-from PythonTools import progress
 from . import client
 
 
@@ -273,7 +273,7 @@ class Slurm(magic.Magics):
         ssh = self._ssh if self._ssh_data is None else self._ssh_data
         ftp = ssh.open_sftp()
         try:
-            for line in progress.iterator(lines, show=verbose and instructions):
+            for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=not verbose):
                 argv = line.split()
                 if not argv:
                     continue
@@ -309,8 +309,7 @@ class Slurm(magic.Magics):
                             raise ValueError('get [-drav] remote_file local_file')
                         local, remote = normalize(argv[2]), normalize(argv[1], ssh)
                         if stat.S_ISDIR(ftp.stat(remote).st_mode):
-                            if verbose:
-                                pbar = progress.ProgressBar(sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0))
+                            pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0), unit='op', disable=not verbose)
                             for dirpath, _, filenames in walk(ftp, remote):
                                 root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
                                 try:
@@ -319,12 +318,10 @@ class Slurm(magic.Magics):
                                     pass
                                 for filename in filenames:
                                     get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume, dryrun)
-                                    if verbose:
-                                        pbar.increment()
+                                    pbar.update()
                                 if not recurse:
                                     break
-                            if verbose:
-                                pbar.done()
+                            pbar.close()
                         else:
                             get(ftp, remote, local, resume, dryrun)
                     elif argv[0] == 'put':
@@ -338,8 +335,7 @@ class Slurm(magic.Magics):
                             raise ValueError('put [-drav] local_file remote_file')
                         local, remote = normalize(argv[1]), normalize(argv[2], ssh)
                         if os.path.isdir(local):
-                            if verbose:
-                                pbar = progress.ProgressBar(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0))
+                            pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0), unit='op', disable=not verbose)
                             for dirpath, _, filenames in os.walk(local):
                                 root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
                                 try:
@@ -348,12 +344,10 @@ class Slurm(magic.Magics):
                                     pass
                                 for filename in filenames:
                                     put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume, dryrun)
-                                    if verbose:
-                                        pbar.increment()
+                                    pbar.update()
                                 if not recurse:
                                     break
-                            if verbose:
-                                pbar.done()
+                            pbar.close()
                         else:
                             put(ftp, local, remote, resume, dryrun)
                     elif argv[0] in ['lls', 'lmkdir', 'lpwd']:
