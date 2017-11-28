@@ -254,7 +254,6 @@ class Slurm(magic.Magics):
             except KeyboardInterrupt:
                 self._ssh.exec_command('scancel {}'.format(job))
 
-    @magic.line_magic
     @magic.cell_magic
     def sftp(self, line='', cell=None):
         """Commands: cd, chmod, chown, get, lls, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
