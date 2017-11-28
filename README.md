@@ -6,6 +6,8 @@
 
 ## Getting Started
 
+Install using `pip install git+https://github.com/auneri/ipyslurm.git`.
+
 See [tutorial notebook](https://github.com/auneri/ipyslurm/tree/master/examples/tutorial.ipynb) for basic usage.
 
 ## Magic Commands
