@@ -1,5 +1,4 @@
-# TODO(auneri1) Recursive option for sftp rm, using bottomup remote walk.
-# TODO(auneri1) Support globbing in sftp get/put.
+#!/usr/bin/env python
 
 from __future__ import absolute_import, division, print_function
 
@@ -57,7 +56,7 @@ def interact(channel):
         writer.start()
         while True:
             stdin = input()
-            if stdin in ('exit', 'quit', 'q'):
+            if stdin in ['exit', 'quit', 'q']:
                 break
             channel.send('{}\n'.format(stdin))
     else:
@@ -84,7 +83,7 @@ def interact(channel):
                         pass
                 if sys.stdin in r:
                     stdin = input()
-                    if stdin in ('exit', 'quit', 'q'):
+                    if stdin in ['exit', 'quit', 'q']:
                         break
                     channel.send('{}\n'.format(stdin))
         finally:
@@ -305,7 +304,7 @@ class IPySlurm(magic.Magics):
                                 resume |= 'a' in arg
                                 argv.remove(arg)
                         if len(argv) != 3:
-                            raise ValueError('get [-drav] remote_file local_file')
+                            raise ValueError('get [-ra] remote_file local_file')
                         local, remote = normalize(argv[2]), normalize(argv[1], ssh)
                         if stat.S_ISDIR(ftp.stat(remote).st_mode):
                             pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0), unit='op', disable=not verbose)
@@ -331,7 +330,7 @@ class IPySlurm(magic.Magics):
                                 resume |= 'a' in arg
                                 argv.remove(arg)
                         if len(argv) != 3:
-                            raise ValueError('put [-drav] local_file remote_file')
+                            raise ValueError('put [-ra] local_file remote_file')
                         local, remote = normalize(argv[1]), normalize(argv[2], ssh)
                         if os.path.isdir(local):
                             pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0), unit='op', disable=not verbose)
