@@ -12,7 +12,6 @@ import sys
 import time
 import timeit
 
-import paramiko
 from IPython.core import magic
 from IPython.display import clear_output
 from six import print_ as print
@@ -102,7 +101,7 @@ class IPySlurm(magic.Magics):
     @magic.cell_magic
     def sbash(self, line='', cell=None):
         if self._ssh is None:
-            raise paramiko.AuthenticationException('Please login using %slogin')
+            raise client.AuthenticationException('Please login using %slogin')
         opts, _ = self.parse_options(line, 'p:t:so:se:', 'period=', 'timeout=', 'stdout=', 'stderr=')
         stdout = opts.get('so', None) or opts.get('stdout', None)
         stderr = opts.get('se', None) or opts.get('stderr', None)
@@ -149,7 +148,7 @@ class IPySlurm(magic.Magics):
     @magic.cell_magic
     def sbatch(self, line='', cell=None):
         if self._ssh is None:
-            raise paramiko.AuthenticationException('Please login using %slogin')
+            raise client.AuthenticationException('Please login using %slogin')
         opts, _ = self.parse_options(line, 'wt:a:', 'wait', 'tail=', 'args=')
         wait = 'w' in opts or 'wait' in opts
         tail = opts.get('t', None) or opts.get('tail', None)
@@ -209,7 +208,7 @@ class IPySlurm(magic.Magics):
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
         if self._ssh is None:
-            raise paramiko.AuthenticationException('Please login using %slogin')
+            raise client.AuthenticationException('Please login using %slogin')
         opts, _ = self.parse_options(line, 'vdi:', 'verbose', 'dryrun', 'instructions=')
         verbose = 'v' in opts or 'verbose' in opts
         dryrun = 'd' in opts or 'dryrun' in opts

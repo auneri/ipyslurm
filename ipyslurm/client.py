@@ -7,6 +7,7 @@ import platform
 import sys
 
 import paramiko
+from paramiko import AuthenticationException
 from six import print_ as print
 
 
@@ -24,7 +25,7 @@ class SSHClient(paramiko.SSHClient):
     def connect(self, server, username, password=None, *args, **kwargs):
         try:
             super(SSHClient, self).connect(server, username=username, password=password, *args, **kwargs)
-        except (paramiko.AuthenticationException, paramiko.SSHException):
+        except (AuthenticationException, paramiko.SSHException):
             def handler(title, instructions, prompt_list):
                 if title:
                     print(title.strip())
