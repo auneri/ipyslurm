@@ -46,7 +46,7 @@ def interact(channel):
 
         def writeall(channel_):
             while True:
-                stdout = channel_.recv(256)
+                stdout = paramiko.py3compat.u(channel_.recv(256))
                 if not stdout:
                     sys.stdout.flush()
                     break
