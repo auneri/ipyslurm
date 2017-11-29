@@ -6,7 +6,6 @@ import datetime
 import getpass
 import importlib
 import os
-import platform
 import re
 import stat
 import sys
@@ -38,56 +37,6 @@ def get(ftp, remote, local, resume=False, dryrun=False):
             ftp.get(remote, local)
             stats = ftp.stat(remote)
             os.utime(local, (stats.st_atime, stats.st_mtime))
-
-
-def interact(channel):
-    if platform.system() == 'Windows':
-        import threading
-
-        def writeall(channel_):
-            while True:
-                stdout = paramiko.py3compat.u(channel_.recv(256))
-                if not stdout:
-                    sys.stdout.flush()
-                    break
-                sys.stdout.write(stdout)
-                sys.stdout.flush()
-        writer = threading.Thread(target=writeall, args=(channel,))
-        writer.start()
-        while True:
-            stdin = input()
-            if stdin in ['exit', 'quit', 'q']:
-                break
-            channel.send('{}\n'.format(stdin))
-    else:
-        import select
-        import socket
-        import termios
-        import tty
-        tty_prev = termios.tcgetattr(sys.stdin)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            tty.setcbreak(sys.stdin.fileno())
-            channel.setblocking(False)
-            while True:
-                r, w, e = select.select([channel, sys.stdin], [], [])
-                if channel in r:
-                    try:
-                        stdout = paramiko.py3compat.u(channel.recv(1024))
-                        if not stdout:
-                            sys.stdout.flush()
-                            break
-                        sys.stdout.write(stdout)
-                        sys.stdout.flush()
-                    except socket.timeout:
-                        pass
-                if sys.stdin in r:
-                    stdin = input()
-                    if stdin in ['exit', 'quit', 'q']:
-                        break
-                    channel.send('{}\n'.format(stdin))
-        finally:
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, tty_prev)
 
 
 def normalize(path, ssh=None):
@@ -371,9 +320,7 @@ class IPySlurm(magic.Magics):
 
     @magic.line_magic
     def sinteract(self, line=''):
-        channel = self._ssh.invoke_shell()
-        interact(channel)
-        channel.close()
+        self._ssh.invoke_shell()
 
     @magic.line_magic
     def slogin(self, line=''):
