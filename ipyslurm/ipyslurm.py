@@ -218,15 +218,12 @@ class IPySlurm(magic.Magics):
         lines = instructions.splitlines()
         if cell is not None:
             lines += cell.splitlines()
+        lines = [line for line in lines if line.strip() and not line.lstrip().startswith('#')]
         ssh = self._ssh if self._ssh_data is None else self._ssh_data
         ftp = ssh.open_sftp()
         try:
-            for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=not verbose):
+            for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=not verbose or len(lines) < 2):
                 argv = line.split()
-                if not argv:
-                    continue
-                if argv[0].startswith('#'):
-                    continue
                 commands = {
                     'cd': 'chdir',
                     'chmod': 'chmod',
