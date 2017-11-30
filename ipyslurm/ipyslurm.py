@@ -209,6 +209,23 @@ class IPySlurm(magic.Magics):
 
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
+        commands = {
+            'cd': 'chdir',
+            'chmod': 'chmod',
+            'chown': 'chown',
+            'get': 'get',
+            'lls': 'os.listdir',
+            'lmkdir': 'os.mkdir',
+            'ln': 'symlink',
+            'lpwd': 'os.getcwd',
+            'ls': 'listdir',
+            'mkdir': 'mkdir',
+            'put': 'put',
+            'pwd': 'getcwd',
+            'rename': 'rename',
+            'rm': 'remove',
+            'rmdir': 'rmdir',
+            'symlink': 'symlink'}
         if self._ssh is None:
             raise client.AuthenticationException('Please login using %slogin')
         opts, _ = self.parse_options(line, 'vdi:', 'verbose', 'dryrun', 'instructions=')
@@ -224,93 +241,75 @@ class IPySlurm(magic.Magics):
         try:
             for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=not verbose or len(lines) < 2):
                 argv = line.split()
-                commands = {
-                    'cd': 'chdir',
-                    'chmod': 'chmod',
-                    'chown': 'chown',
-                    'get': 'get',
-                    'lls': 'os.listdir',
-                    'lmkdir': 'os.mkdir',
-                    'ln': 'symlink',
-                    'lpwd': 'os.getcwd',
-                    'ls': 'listdir',
-                    'mkdir': 'mkdir',
-                    'put': 'put',
-                    'pwd': 'getcwd',
-                    'rename': 'rename',
-                    'rm': 'remove',
-                    'rmdir': 'rmdir',
-                    'symlink': 'symlink'}
-                if argv[0] in commands:
-                    command = commands[argv[0]]
-                    if argv[0] == 'get':
-                        recurse, resume = False, False
-                        for arg in list(argv):
-                            if arg.startswith('-'):
-                                recurse |= 'r' in arg
-                                resume |= 'a' in arg
-                                argv.remove(arg)
-                        if len(argv) != 3:
-                            raise ValueError('get [-ra] remote_file local_file')
-                        local, remote = normalize(argv[2]), normalize(argv[1], ssh)
-                        if stat.S_ISDIR(ftp.stat(remote).st_mode):
-                            pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0), unit='op', disable=not verbose)
-                            for dirpath, _, filenames in walk(ftp, remote):
-                                root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
-                                try:
-                                    os.mkdir(root)
-                                except OSError:
-                                    pass
-                                for filename in filenames:
-                                    get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume, dryrun)
-                                    pbar.update()
-                                if not recurse:
-                                    break
-                            pbar.close()
-                        else:
-                            get(ftp, remote, local, resume, dryrun)
-                    elif argv[0] == 'put':
-                        recurse, resume = False, False
-                        for arg in list(argv):
-                            if arg.startswith('-'):
-                                recurse |= 'r' in arg
-                                resume |= 'a' in arg
-                                argv.remove(arg)
-                        if len(argv) != 3:
-                            raise ValueError('put [-ra] local_file remote_file')
-                        local, remote = normalize(argv[1]), normalize(argv[2], ssh)
-                        if os.path.isdir(local):
-                            pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0), unit='op', disable=not verbose)
-                            for dirpath, _, filenames in os.walk(local):
-                                root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
-                                try:
-                                    ftp.mkdir(root)
-                                except OSError:
-                                    pass
-                                for filename in filenames:
-                                    put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume, dryrun)
-                                    pbar.update()
-                                if not recurse:
-                                    break
-                            pbar.close()
-                        else:
-                            put(ftp, local, remote, resume, dryrun)
-                    elif argv[0] in ['lls', 'lmkdir', 'lpwd']:
-                        if dryrun:
-                            print(' '.join(argv))
-                        else:
-                            output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
+                command = commands.get(argv[0])
+                if command is None:
+                    raise SyntaxError('"{}" is not supported'.format(argv[0]))
+                if argv[0] == 'get':
+                    recurse, resume = False, False
+                    for arg in list(argv):
+                        if arg.startswith('-'):
+                            recurse |= 'r' in arg
+                            resume |= 'a' in arg
+                            argv.remove(arg)
+                    if len(argv) != 3:
+                        raise ValueError('get [-ra] remote_file local_file')
+                    local, remote = normalize(argv[2]), normalize(argv[1], ssh)
+                    if stat.S_ISDIR(ftp.stat(remote).st_mode):
+                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0), unit='op', disable=not verbose)
+                        for dirpath, _, filenames in walk(ftp, remote):
+                            root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
+                            try:
+                                os.mkdir(root)
+                            except OSError:
+                                pass
+                            for filename in filenames:
+                                get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume, dryrun)
+                                pbar.update()
+                            if not recurse:
+                                break
+                        pbar.close()
                     else:
-                        if dryrun:
-                            print(' '.join(argv))
-                        else:
-                            output = getattr(ftp, command)(*argv[1:])
-                    if argv[0] in ['pwd', 'lpwd'] and not dryrun:
-                        print(output)
-                    elif argv[0] in ['ls', 'lls'] and not dryrun:
-                        print('\n'.join(output))
+                        get(ftp, remote, local, resume, dryrun)
+                elif argv[0] == 'put':
+                    recurse, resume = False, False
+                    for arg in list(argv):
+                        if arg.startswith('-'):
+                            recurse |= 'r' in arg
+                            resume |= 'a' in arg
+                            argv.remove(arg)
+                    if len(argv) != 3:
+                        raise ValueError('put [-ra] local_file remote_file')
+                    local, remote = normalize(argv[1]), normalize(argv[2], ssh)
+                    if os.path.isdir(local):
+                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0), unit='op', disable=not verbose)
+                        for dirpath, _, filenames in os.walk(local):
+                            root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
+                            try:
+                                ftp.mkdir(root)
+                            except OSError:
+                                pass
+                            for filename in filenames:
+                                put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume, dryrun)
+                                pbar.update()
+                            if not recurse:
+                                break
+                        pbar.close()
+                    else:
+                        put(ftp, local, remote, resume, dryrun)
+                elif argv[0] in ['lls', 'lmkdir', 'lpwd']:
+                    if dryrun:
+                        print(' '.join(argv))
+                    else:
+                        output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
                 else:
-                    raise SyntaxError('Command "{}" is not supported'.format(argv[0]))
+                    if dryrun:
+                        print(' '.join(argv))
+                    else:
+                        output = getattr(ftp, command)(*argv[1:])
+                if argv[0] in ['pwd', 'lpwd'] and not dryrun:
+                    print(output)
+                elif argv[0] in ['ls', 'lls'] and not dryrun:
+                    print('\n'.join(output))
         except KeyboardInterrupt:
             pass
         finally:
