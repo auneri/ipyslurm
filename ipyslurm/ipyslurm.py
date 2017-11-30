@@ -155,7 +155,9 @@ class IPySlurm(magic.Magics):
         args = opts.get('a', '') or opts.get('args', '')
         if tail is not None:
             tail = int(tail)
-        args += ' ' + ' '.join(l.replace('#SBATCH', '').strip() for l in cell.splitlines() if l.startswith('#SBATCH'))
+        if args and not args.endswith(' '):
+            args += ' '
+        args += ' '.join(l.replace('#SBATCH', '').strip() for l in cell.splitlines() if l.startswith('#SBATCH'))
         cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines() if not l.startswith('#SBATCH'))
         shebangs = [i for i, l in enumerate(cell.splitlines()) if l.startswith('#!')]
         if len(shebangs) == 0:
