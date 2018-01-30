@@ -118,9 +118,10 @@ class IPySlurm(magic.Magics):
             cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines())
             command = '\n'.join(cell.splitlines()[:shebangs[0]])
             script = '\n'.join(cell.splitlines()[shebangs[0]:])
-            self._ssh.exec_command('mkdir -p ~/.ipyslurm'.format(script))
-            self._ssh.exec_command('echo -e "{}" > ~/.ipyslurm/sbash'.format(script))
-            self._ssh.exec_command('chmod +x ~/.ipyslurm/sbash')
+            self._ssh.exec_command('\n'.join((
+                'mkdir -p ~/.ipyslurm',
+                'echo -e "{}" > ~/.ipyslurm/sbash'.format(script),
+                'chmod +x ~/.ipyslurm/sbash')))
             command = '\n'.join((command, '~/.ipyslurm/sbash'))
         else:
             raise NotImplementedError('Multiple shebangs are not supported')
@@ -166,9 +167,10 @@ class IPySlurm(magic.Magics):
             command = '\n'.join(cell.splitlines()[:shebangs[0]])
             script = '\n'.join(cell.splitlines()[shebangs[0]:])
             timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            self._ssh.exec_command('mkdir -p ~/.ipyslurm'.format(script))
-            self._ssh.exec_command('echo -e "{}" > ~/.ipyslurm/sbatch_{}'.format(script, timestamp))
-            self._ssh.exec_command('chmod +x ~/.ipyslurm/sbatch_{}'.format(timestamp))
+            self._ssh.exec_command('\n'.join((
+                'mkdir -p ~/.ipyslurm',
+                'echo -e "{}" > ~/.ipyslurm/sbatch_{}'.format(script, timestamp),
+                'chmod +x ~/.ipyslurm/sbatch_{}'.format(timestamp))))
             command = '\n'.join((command, '~/.ipyslurm/sbatch_{}'.format(timestamp)))
         else:
             raise NotImplementedError('Multiple shebangs are not supported')
