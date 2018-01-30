@@ -179,14 +179,12 @@ class IPySlurm(magic.Magics):
             command += ['~/.ipyslurm/sbatch_{}'.format(timestamp)]
         else:
             raise NotImplementedError('Multiple shebangs are not supported')
-        while True:
-            match = re.search('\{(.+?)\}', args)
-            if not match:
-                break
-            stdouts, stderrs = self._ssh.exec_command(match.group(1), verbose=False)
-            if stderrs:
-                raise IOError('\n'.join(stderrs))
-            args = re.sub('\{(.+?)\}', '\n'.join(stdouts), args, count=1)
+        command_args = [match.group(1) for match in re.finditer('\{(.+?)\}', args)]
+        stdouts, stderrs = self._ssh.exec_command('\n'.join(command_args), verbose=False)
+        if stderrs:
+            raise IOError('\n'.join(stderrs))
+        for stdout in stdouts:
+            args = re.sub('\{(.+?)\}', stdout, args, count=1)
         command = ['sbatch {} --wrap="{}"'.format(args, '\n'.join(command))]
         stdouts, _ = self._ssh.exec_command('\n'.join(command_init + command))
         if stdouts and stdouts[-1].startswith('Submitted batch job '):
