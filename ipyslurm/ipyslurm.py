@@ -112,24 +112,27 @@ class IPySlurm(magic.Magics):
         if timeout is not None:
             timeout = float(timeout)
         shebangs = [i for i, l in enumerate(cell.splitlines()) if l.startswith('#!')]
+        command_init = []
+        command = []
         if len(shebangs) == 0:
-            command = '\n'.join(cell.splitlines())
+            command += cell.splitlines()
         elif len(shebangs) == 1:
             cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines())
-            command = '\n'.join(cell.splitlines()[:shebangs[0]])
             script = '\n'.join(cell.splitlines()[shebangs[0]:])
-            self._ssh.exec_command('\n'.join((
+            command_init += [
                 'mkdir -p ~/.ipyslurm',
                 'echo -e "{}" > ~/.ipyslurm/sbash'.format(script),
-                'chmod +x ~/.ipyslurm/sbash')))
-            command = '\n'.join((command, '~/.ipyslurm/sbash'))
+                'chmod +x ~/.ipyslurm/sbash']
+            command += cell.splitlines()[:shebangs[0]]
+            command += ['~/.ipyslurm/sbash']
         else:
             raise NotImplementedError('Multiple shebangs are not supported')
         start = timeit.default_timer()
         try:
             while True:
                 clear_output(wait=True)
-                stdouts, stderrs = self._ssh.exec_command(command, verbose=stdout is None and stderr is None)
+                stdouts, stderrs = self._ssh.exec_command('\n'.join(command_init + command), verbose=stdout is None and stderr is None)
+                del command_init[:]
                 elapsed = timeit.default_timer() - start
                 if timeout is not None and elapsed > timeout:
                     print('\nsbash terminated after {:.1f} seconds'.format(elapsed))
@@ -161,17 +164,19 @@ class IPySlurm(magic.Magics):
         args += ' '.join(l.replace('#SBATCH', '').strip() for l in cell.splitlines() if l.startswith('#SBATCH'))
         cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines() if not l.startswith('#SBATCH'))
         shebangs = [i for i, l in enumerate(cell.splitlines()) if l.startswith('#!')]
+        command_init = []
+        command = []
         if len(shebangs) == 0:
-            command = '\n'.join(cell.splitlines())
+            command += cell.splitlines()
         elif len(shebangs) == 1:
-            command = '\n'.join(cell.splitlines()[:shebangs[0]])
-            script = '\n'.join(cell.splitlines()[shebangs[0]:])
             timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            self._ssh.exec_command('\n'.join((
+            script = '\n'.join(cell.splitlines()[shebangs[0]:])
+            command_init += [
                 'mkdir -p ~/.ipyslurm',
                 'echo -e "{}" > ~/.ipyslurm/sbatch_{}'.format(script, timestamp),
-                'chmod +x ~/.ipyslurm/sbatch_{}'.format(timestamp))))
-            command = '\n'.join((command, '~/.ipyslurm/sbatch_{}'.format(timestamp)))
+                'chmod +x ~/.ipyslurm/sbatch_{}'.format(timestamp)]
+            command += cell.splitlines()[:shebangs[0]]
+            command += ['~/.ipyslurm/sbatch_{}'.format(timestamp)]
         else:
             raise NotImplementedError('Multiple shebangs are not supported')
         while True:
@@ -182,7 +187,8 @@ class IPySlurm(magic.Magics):
             if stderrs:
                 raise IOError('\n'.join(stderrs))
             args = re.sub('\{(.+?)\}', '\n'.join(stdouts), args, count=1)
-        stdouts, _ = self._ssh.exec_command('sbatch {} --wrap="{}"'.format(args, command))
+        command = ['sbatch {} --wrap="{}"'.format(args, '\n'.join(command))]
+        stdouts, _ = self._ssh.exec_command('\n'.join(command_init + command))
         if stdouts and stdouts[-1].startswith('Submitted batch job '):
             job = int(stdouts[-1].lstrip('Submitted batch job '))
         else:
