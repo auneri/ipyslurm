@@ -131,7 +131,7 @@ class IPySlurm(magic.Magics):
         try:
             while True:
                 clear_output(wait=True)
-                stdouts, stderrs = self._ssh.exec_command('\n'.join(command_init + command), verbose=stdout is None and stderr is None)
+                stdouts, stderrs = self._ssh.exec_command(command_init + command, verbose=stdout is None and stderr is None)
                 del command_init[:]
                 elapsed = timeit.default_timer() - start
                 if timeout is not None and elapsed > timeout:
@@ -180,13 +180,13 @@ class IPySlurm(magic.Magics):
         else:
             raise NotImplementedError('Multiple shebangs are not supported')
         command_args = [match.group(1) for match in re.finditer('\{(.+?)\}', args)]
-        stdouts, stderrs = self._ssh.exec_command('\n'.join(command_args), verbose=False)
+        stdouts, stderrs = self._ssh.exec_command(command_args, verbose=False)
         if stderrs:
             raise IOError('\n'.join(stderrs))
         for stdout in stdouts:
             args = re.sub('\{(.+?)\}', stdout, args, count=1)
         command = ['sbatch {} --wrap="{}"'.format(args, '\n'.join(command))]
-        stdouts, _ = self._ssh.exec_command('\n'.join(command_init + command))
+        stdouts, _ = self._ssh.exec_command(command_init + command)
         if stdouts and stdouts[-1].startswith('Submitted batch job '):
             job = int(stdouts[-1].lstrip('Submitted batch job '))
         else:

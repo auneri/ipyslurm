@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+import collections
 import getpass
 import platform
 import sys
@@ -35,9 +36,11 @@ class SSHClient(paramiko.SSHClient):
             self.get_transport().auth_interactive_dumb(username=username, handler=handler)
         self._server = server
 
-    def exec_command(self, *args, **kwargs):
+    def exec_command(self, command, *args, **kwargs):
         verbose = kwargs.pop('verbose', True)
-        _, stdout, stderr = super(SSHClient, self).exec_command(*args, **kwargs)
+        if isinstance(command, collections.Iterable):
+            command = '\n'.join(command)
+        _, stdout, stderr = super(SSHClient, self).exec_command(command, *args, **kwargs)
         stdouts = []
         stderrs = []
         for line in stdout:
