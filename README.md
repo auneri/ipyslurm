@@ -1,6 +1,6 @@
 # ipyslurm
 
-[IPython extensions](https://ipython.readthedocs.io/en/stable/config/extensions/index.html) for interacting with [Slurm Workload Manager](https://slurm.schedmd.com) from [Jupyter](https://jupyter.readthedocs.io).
+[IPython extension](https://ipython.readthedocs.io/en/stable/config/extensions/index.html) for interacting with [Slurm Workload Manager](https://slurm.schedmd.com) from [Jupyter](https://jupyter.readthedocs.io).
 
 [![license](https://img.shields.io/github/license/auneri/ipyslurm.svg)](https://github.com/auneri/ipyslurm/blob/master/LICENSE.md)
 
