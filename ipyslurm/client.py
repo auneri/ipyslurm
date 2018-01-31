@@ -41,16 +41,13 @@ class SSHClient(paramiko.SSHClient):
         if isinstance(command, collections.Iterable):
             command = '\n'.join(command)
         _, stdout, stderr = super(SSHClient, self).exec_command(command, *args, **kwargs)
-        stdouts = []
-        stderrs = []
-        for line in stdout:
-            if verbose:
-                print(line.strip('\n'), file=sys.stdout)
-            stdouts.append(line.strip('\n'))
-        for line in stderr:
-            if verbose:
-                print(line.strip('\n'), file=sys.stderr)
-            stderrs.append(line.strip('\n'))
+        stdouts = [line.strip('\n') for line in stdout]
+        stderrs = [line.strip('\n') for line in stderr]
+        if verbose:
+            if stdouts:
+                print('\n'.join(stdouts), file=sys.stdout)
+            if stderrs:
+                print('\n'.join(stderrs), file=sys.stderr)
         return stdouts, stderrs
 
     def get_server(self):
