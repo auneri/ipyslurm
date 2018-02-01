@@ -2,7 +2,6 @@
 
 from __future__ import absolute_import, division, print_function
 
-import collections
 import getpass
 import platform
 import sys
@@ -10,6 +9,7 @@ import sys
 import paramiko
 from paramiko import AuthenticationException
 from six import print_ as print
+from six import string_types
 
 
 class SSHClient(paramiko.SSHClient):
@@ -38,7 +38,7 @@ class SSHClient(paramiko.SSHClient):
 
     def exec_command(self, command, *args, **kwargs):
         verbose = kwargs.pop('verbose', True)
-        if isinstance(command, collections.Iterable):
+        if not isinstance(command, string_types):
             command = '\n'.join(command)
         _, stdout, stderr = super(SSHClient, self).exec_command(command, *args, **kwargs)
         stdouts = [line.strip('\n') for line in stdout]
