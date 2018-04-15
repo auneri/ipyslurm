@@ -46,7 +46,10 @@ def normalize(path, ssh=None):
     if ssh is None:
         return os.path.abspath(os.path.expanduser(path))
     else:
-        return ssh.exec_command('readlink -f {}'.format(path), verbose=False)[0][0]
+        try:
+            return ssh.exec_command('readlink -f {}'.format(path), verbose=False)[0][0]
+        except IndexError:
+            raise OSError('Failed to find {}'.format(path))
 
 
 def put(ftp, local, remote, resume=False, dryrun=False):
