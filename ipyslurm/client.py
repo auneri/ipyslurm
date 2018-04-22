@@ -8,7 +8,7 @@ import sys
 
 import paramiko
 from paramiko import AuthenticationException
-from six import print_ as print
+from six import print_ as print  # noqa: A001
 from six import string_types
 
 

@@ -14,7 +14,7 @@ import timeit
 
 from IPython.core import magic
 from IPython.display import clear_output
-from six import print_ as print
+from six import print_ as print  # noqa: A001
 from six.moves import input
 from tqdm import tqdm_notebook
 
