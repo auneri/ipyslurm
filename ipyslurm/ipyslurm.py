@@ -139,7 +139,7 @@ class IPySlurm(magic.Magics):
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('--quiet', action='store_true', help='')
-    @magic_arguments.argument('--dryrun', action='store_true', help='')
+    @magic_arguments.argument('--dry-run', action='store_true', help='')
     @magic.cell_magic
     def sftp(self, line, cell):
         """Commands: cd, chmod, chown, get, lls, lmkdir, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
@@ -190,13 +190,13 @@ class IPySlurm(magic.Magics):
                             except OSError:
                                 pass
                             for filename in filenames:
-                                get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume, args.dryrun)
+                                get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume, args.dry_run)
                                 pbar.update()
                             if not recurse:
                                 break
                         pbar.close()
                     else:
-                        get(ftp, remote, local, resume, args.dryrun)
+                        get(ftp, remote, local, resume, args.dry_run)
                 elif argv[0] == 'put':
                     recurse, resume = False, False
                     for arg in list(argv):
@@ -216,26 +216,26 @@ class IPySlurm(magic.Magics):
                             except OSError:
                                 pass
                             for filename in filenames:
-                                put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume, args.dryrun)
+                                put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume, args.dry_run)
                                 pbar.update()
                             if not recurse:
                                 break
                         pbar.close()
                     else:
-                        put(ftp, local, remote, resume, args.dryrun)
+                        put(ftp, local, remote, resume, args.dry_run)
                 elif argv[0] in ['lls', 'lmkdir', 'lpwd']:
-                    if args.dryrun:
+                    if args.dry_run:
                         print(' '.join(argv))
                     else:
                         output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
                 else:
-                    if args.dryrun:
+                    if args.dry_run:
                         print(' '.join(argv))
                     else:
                         output = getattr(ftp, command)(*argv[1:])
-                if argv[0] in ['pwd', 'lpwd'] and not args.dryrun:
+                if argv[0] in ['pwd', 'lpwd'] and not args.dry_run:
                     print(output)
-                elif argv[0] in ['ls', 'lls'] and not args.dryrun:
+                elif argv[0] in ['ls', 'lls'] and not args.dry_run:
                     print('\n'.join(output))
 
     @magic.line_magic
