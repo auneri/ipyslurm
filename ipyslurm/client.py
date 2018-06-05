@@ -32,25 +32,23 @@ class Slurm(object):
         if self._ssh is None:
             raise AuthenticationException('Not logged in to server')
         shebangs = [i for i, line in enumerate(lines) if line.startswith('#!')]
-        command_init, command_del, command = [], [], []
-        if len(shebangs) == 0:
-            command += list(lines)
-        elif len(shebangs) == 1:
-            lines = [line.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for line in lines]
+        command = lines[:shebangs[0]] if shebangs else lines
+        command_init = []
+        command_del = []
+        for i, j in zip(shebangs, shebangs[1:] + [None]):
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_{}'.format(i))
+            script = '\n'.join(line.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for line in lines[slice(i, j)])
             command_init += [
                 'mkdir -p ~/.ipyslurm',
-                'echo -e "{}" > ~/.ipyslurm/bash'.format('\n'.join(lines[shebangs[0]:])),
-                'chmod +x ~/.ipyslurm/bash']
-            command_del += ['rm ~/.ipyslurm/bash']
-            command += lines[:shebangs[0]] + ['~/.ipyslurm/bash']
-        else:
-            raise NotImplementedError('Multiple shebangs are not supported')
+                'echo -e "{}" > ~/.ipyslurm/bash_{}'.format(script, timestamp),
+                'chmod +x ~/.ipyslurm/bash_{}'.format(timestamp)]
+            command_del += ['rm ~/.ipyslurm/bash_{}'.format(timestamp)]
+            command += ['~/.ipyslurm/bash_{}'.format(timestamp)]
         try:
             if command_init:
                 self._ssh.exec_command(command_init, verbose=False)
             while True:
-                stdouts, stderrs = self._ssh.exec_command(command, verbose=verbose)
-                yield stdouts, stderrs
+                yield self._ssh.exec_command(command, verbose=verbose)
         except KeyboardInterrupt:
             pass
         finally:
@@ -65,18 +63,16 @@ class Slurm(object):
         args = ' '.join(args + [line.replace('#SBATCH', '').strip() for line in lines if line.startswith('#SBATCH')])
         lines = [line.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for line in lines if not line.startswith('#SBATCH')]
         shebangs = [i for i, line in enumerate(lines) if line.startswith('#!')]
-        command_init, command = [], []
-        if len(shebangs) == 0:
-            command += lines
-        elif len(shebangs) == 1:
-            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        command = lines[:shebangs[0]] if shebangs else lines
+        command_init = []
+        for i, j in zip(shebangs, shebangs[1:] + [None]):
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_{}'.format(i))
+            script = '\n'.join(lines[slice(i, j)])
             command_init += [
                 'mkdir -p ~/.ipyslurm',
-                'echo -e "{}" > ~/.ipyslurm/batch_{}'.format('\n'.join(lines[shebangs[0]:]), timestamp),
+                'echo -e "{}" > ~/.ipyslurm/batch_{}'.format(script, timestamp),
                 'chmod +x ~/.ipyslurm/batch_{}'.format(timestamp)]
-            command += lines[:shebangs[0]] + ['~/.ipyslurm/batch_{}'.format(timestamp)]
-        else:
-            raise NotImplementedError('Multiple shebangs are not supported')
+            command += ['~/.ipyslurm/batch_{}'.format(timestamp)]
         command_args = [match.group(1) for match in re.finditer('\{(.+?)\}', args)]
         stdouts, stderrs = self._ssh.exec_command(command_args, verbose=False)
         if stderrs:
