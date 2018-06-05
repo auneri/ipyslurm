@@ -95,10 +95,8 @@ class IPySlurm(magic.Magics):
         super(IPySlurm, self).__del__()
 
     def __repr__(self):
-        if self._ssh is not None and self._ssh_data is not None:
-            return 'Logged in to {} and {}'.format(self._ssh.get_server(), self._ssh_data.get_server())
-        elif self._ssh is not None:
-            return 'Logged in to {}'.format(self._ssh.get_server())
+        servers = [ssh.get_server() for ssh in [self._ssh, self._ssh_data] if ssh is not None]
+        return 'Logged in to {}'.format(' and '.join(servers)) if servers else 'Not logged in to server'
 
     @magic.needs_local_scope
     @magic.cell_magic
