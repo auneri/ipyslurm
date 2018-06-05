@@ -2,14 +2,138 @@
 
 from __future__ import absolute_import, division, print_function
 
+import datetime
 import getpass
 import platform
+import re
 import sys
+from contextlib import contextmanager
 
 import paramiko
 from paramiko import AuthenticationException
 from six import print_ as print  # noqa: A001
 from six import string_types
+
+
+class Slurm(object):
+
+    def __init__(self):
+        self._ssh = None
+        self._ssh_data = None
+
+    def __del__(self):
+        self.logout()
+
+    def __repr__(self):
+        servers = [ssh.get_server() for ssh in [self._ssh, self._ssh_data] if ssh is not None]
+        return 'Logged in to {}'.format(' and '.join(servers)) if servers else 'Not logged in to server'
+
+    def bash(self, lines, verbose=True):
+        if self._ssh is None:
+            raise AuthenticationException('Not logged in to server')
+        shebangs = [i for i, line in enumerate(lines) if line.startswith('#!')]
+        command_init, command_del, command = [], [], []
+        if len(shebangs) == 0:
+            command += list(lines)
+        elif len(shebangs) == 1:
+            lines = [line.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for line in lines]
+            command_init += [
+                'mkdir -p ~/.ipyslurm',
+                'echo -e "{}" > ~/.ipyslurm/bash'.format('\n'.join(lines[shebangs[0]:])),
+                'chmod +x ~/.ipyslurm/bash']
+            command_del += ['rm ~/.ipyslurm/bash']
+            command += lines[:shebangs[0]] + ['~/.ipyslurm/bash']
+        else:
+            raise NotImplementedError('Multiple shebangs are not supported')
+        try:
+            if command_init:
+                self._ssh.exec_command(command_init, verbose=False)
+            while True:
+                stdouts, stderrs = self._ssh.exec_command(command, verbose=verbose)
+                yield stdouts, stderrs
+        except KeyboardInterrupt:
+            pass
+        finally:
+            if command_del:
+                self._ssh.exec_command(command_del, verbose=False)
+
+    def batch(self, lines, args=None):
+        if self._ssh is None:
+            raise AuthenticationException('Not logged in to server')
+        if args is None:
+            args = []
+        args = ' '.join(args + [line.replace('#SBATCH', '').strip() for line in lines if line.startswith('#SBATCH')])
+        lines = [line.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for line in lines if not line.startswith('#SBATCH')]
+        shebangs = [i for i, line in enumerate(lines) if line.startswith('#!')]
+        command_init, command = [], []
+        if len(shebangs) == 0:
+            command += lines
+        elif len(shebangs) == 1:
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            command_init += [
+                'mkdir -p ~/.ipyslurm',
+                'echo -e "{}" > ~/.ipyslurm/batch_{}'.format('\n'.join(lines[shebangs[0]:]), timestamp),
+                'chmod +x ~/.ipyslurm/batch_{}'.format(timestamp)]
+            command += lines[:shebangs[0]] + ['~/.ipyslurm/batch_{}'.format(timestamp)]
+        else:
+            raise NotImplementedError('Multiple shebangs are not supported')
+        command_args = [match.group(1) for match in re.finditer('\{(.+?)\}', args)]
+        stdouts, stderrs = self._ssh.exec_command(command_args, verbose=False)
+        if stderrs:
+            raise IOError('\n'.join(stderrs))
+        for stdout in stdouts:
+            args = re.sub('\{(.+?)\}', stdout, args, count=1)
+        command = ['sbatch {} --wrap="{}"'.format(args, '\n'.join(command))]
+        stdouts, _ = self._ssh.exec_command(command_init + command)
+        if not stdouts or not stdouts[-1].startswith('Submitted batch job '):
+            raise IOError('\n'.join(stdouts))
+        return int(stdouts[-1].lstrip('Submitted batch job '))
+
+    @contextmanager
+    def ftp(self):
+        if self._ssh is None:
+            raise AuthenticationException('Not logged in to server')
+        ssh = self._ssh_data or self._ssh
+        ftp = ssh.open_sftp()
+        try:
+            yield ssh, ftp
+        except KeyboardInterrupt:
+            pass
+        finally:
+            ftp.close()
+
+    def interact(self):
+        self._ssh.invoke_shell()
+
+    def login(self, server, username, password=None, server_data=None):
+        try:
+            print('Logging in to {}@{}'.format(username, server))
+            self._ssh = SSHClient()
+            self._ssh.connect(server, username, password)
+            self._ssh.get_transport().set_keepalive(30)
+        except:  # noqa: E722
+            self._ssh = None
+            raise
+        if server_data is not None:
+            try:
+                sys.stdout.flush()
+                print('Please wait for a new verification code before logging in to {}'.format(server_data), file=sys.stderr, flush=True)
+                print('Logging in to {}@{}'.format(username, server_data))
+                self._ssh_data = SSHClient()
+                self._ssh_data.connect(server_data, username, password)
+                self._ssh_data.get_transport().set_keepalive(30)
+            except:  # noqa: E722
+                self._ssh_data = None
+                raise
+        return self
+
+    def logout(self):
+        if self._ssh is not None:
+            print('Logging out of {}'.format(self._ssh.get_server()))
+            self._ssh = None
+        if self._ssh_data is not None:
+            print('Logging out of {}'.format(self._ssh_data.get_server()))
+            self._ssh_data = None
 
 
 class SSHClient(paramiko.SSHClient):

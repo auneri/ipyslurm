@@ -6,7 +6,6 @@ import datetime
 import getpass
 import importlib
 import os
-import re
 import stat
 import sys
 import time
@@ -87,22 +86,11 @@ class IPySlurm(magic.Magics):
 
     def __init__(self, *args, **kwargs):
         super(IPySlurm, self).__init__(*args, **kwargs)
-        self._ssh = None
-        self._ssh_data = None
-
-    def __del__(self):
-        self.slogout()
-        super(IPySlurm, self).__del__()
-
-    def __repr__(self):
-        servers = [ssh.get_server() for ssh in [self._ssh, self._ssh_data] if ssh is not None]
-        return 'Logged in to {}'.format(' and '.join(servers)) if servers else 'Not logged in to server'
+        self._slurm = client.Slurm()
 
     @magic.needs_local_scope
     @magic.cell_magic
     def sbash(self, line='', cell=None):
-        if self._ssh is None:
-            raise client.AuthenticationException('Please login using %slogin')
         opts, _ = self.parse_options(line, 'p:t:so:se:', 'period=', 'timeout=', 'stdout=', 'stderr=')
         stdout = opts.get('so', None) or opts.get('stdout', None)
         stderr = opts.get('se', None) or opts.get('stderr', None)
@@ -112,104 +100,48 @@ class IPySlurm(magic.Magics):
             period = float(period)
         if timeout is not None:
             timeout = float(timeout)
-        shebangs = [i for i, l in enumerate(cell.splitlines()) if l.startswith('#!')]
-        command_init = []
-        command = []
-        if len(shebangs) == 0:
-            command += cell.splitlines()
-        elif len(shebangs) == 1:
-            cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines())
-            script = '\n'.join(cell.splitlines()[shebangs[0]:])
-            command_init += [
-                'mkdir -p ~/.ipyslurm',
-                'echo -e "{}" > ~/.ipyslurm/sbash'.format(script),
-                'chmod +x ~/.ipyslurm/sbash']
-            command += cell.splitlines()[:shebangs[0]]
-            command += ['~/.ipyslurm/sbash']
-        else:
-            raise NotImplementedError('Multiple shebangs are not supported')
         start = timeit.default_timer()
-        try:
-            while True:
+        for stdouts, stderrs in self._slurm.bash(cell.splitlines(), verbose=stdout is None and stderr is None):
+            elapsed = timeit.default_timer() - start
+            if timeout is not None and elapsed > timeout:
+                print('\nsbash terminated after {:.1f} seconds'.format(elapsed))
+            elif period is not None:
+                sys.stdout.flush()
+                sys.stderr.flush()
+                time.sleep(period)
                 clear_output(wait=True)
-                stdouts, stderrs = self._ssh.exec_command(command_init + command, verbose=stdout is None and stderr is None)
-                del command_init[:]
-                elapsed = timeit.default_timer() - start
-                if timeout is not None and elapsed > timeout:
-                    print('\nsbash terminated after {:.1f} seconds'.format(elapsed))
-                    break
-                if period is not None:
-                    sys.stdout.flush()
-                    sys.stderr.flush()
-                    time.sleep(period)
-                else:
-                    break
-        except KeyboardInterrupt:
-            pass
-        else:
-            if stdout is not None:
-                self.shell.user_ns.update({stdout: stdouts})
-            if stderr is not None:
-                self.shell.user_ns.update({stderr: stderrs})
+                continue
+            break
+        if stdout is not None:
+            self.shell.user_ns.update({stdout: stdouts})
+        if stderr is not None:
+            self.shell.user_ns.update({stderr: stderrs})
 
     @magic.cell_magic
     def sbatch(self, line='', cell=None):
-        if self._ssh is None:
-            raise client.AuthenticationException('Please login using %slogin')
         opts, _ = self.parse_options(line, 'wt:a:', 'wait', 'tail=', 'args=')
         wait = 'w' in opts or 'wait' in opts
         tail = opts.get('t', None) or opts.get('tail', None)
-        args = opts.get('a', '') or opts.get('args', '')
+        args = opts.get('a', None) or opts.get('args', None)
         if tail is not None:
             tail = int(tail)
-        if args and not args.endswith(' '):
-            args += ' '
-        args += ' '.join(l.replace('#SBATCH', '').strip() for l in cell.splitlines() if l.startswith('#SBATCH'))
-        cell = '\n'.join(l.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for l in cell.splitlines() if not l.startswith('#SBATCH'))
-        shebangs = [i for i, l in enumerate(cell.splitlines()) if l.startswith('#!')]
-        command_init = []
-        command = []
-        if len(shebangs) == 0:
-            command += cell.splitlines()
-        elif len(shebangs) == 1:
-            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            script = '\n'.join(cell.splitlines()[shebangs[0]:])
-            command_init += [
-                'mkdir -p ~/.ipyslurm',
-                'echo -e "{}" > ~/.ipyslurm/sbatch_{}'.format(script, timestamp),
-                'chmod +x ~/.ipyslurm/sbatch_{}'.format(timestamp)]
-            command += cell.splitlines()[:shebangs[0]]
-            command += ['~/.ipyslurm/sbatch_{}'.format(timestamp)]
-        else:
-            raise NotImplementedError('Multiple shebangs are not supported')
-        command_args = [match.group(1) for match in re.finditer('\{(.+?)\}', args)]
-        stdouts, stderrs = self._ssh.exec_command(command_args, verbose=False)
-        if stderrs:
-            raise IOError('\n'.join(stderrs))
-        for stdout in stdouts:
-            args = re.sub('\{(.+?)\}', stdout, args, count=1)
-        command = ['sbatch {} --wrap="{}"'.format(args, '\n'.join(command))]
-        stdouts, _ = self._ssh.exec_command(command_init + command)
-        if stdouts and stdouts[-1].startswith('Submitted batch job '):
-            job = int(stdouts[-1].lstrip('Submitted batch job '))
-        else:
-            job = None
-        if job is not None and (wait or tail is not None):
+        job = self._slurm.batch(cell.splitlines(), args)
+        if wait or tail is not None:
             keys = 'JobName', 'JobId', 'JobState', 'SubmitTime', 'StartTime', 'RunTime'
             fill = max(len(i) for i in keys)
             try:
                 while True:
-                    stdouts, _ = self._ssh.exec_command('scontrol show jobid {}'.format(job), verbose=False)
+                    stdouts, _ = self._slurm._ssh.exec_command('scontrol show jobid {}'.format(job), verbose=False)
                     details = dict(line.split('=', 1) for line in '\n'.join(stdouts).split())
                     clear_output(wait=True)
                     if tail is not None and details['JobState'] in ['RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED']:
-                        self._ssh.exec_command('tail --lines={} {}'.format(tail, details['StdOut']))
+                        self._slurm._ssh.exec_command('tail --lines={} {}'.format(tail, details['StdOut']))
                     else:
                         print('\n'.join('{1:>{0}}: {2}'.format(fill, key, details[key]) for key in keys))
                     if details['JobState'] not in ['PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING']:
                         break
             except KeyboardInterrupt:
-                self._ssh.exec_command('scancel {}'.format(job))
+                self._slurm._ssh.exec_command('scancel {}'.format(job))
 
     @magic.cell_magic
     def sftp(self, line='', cell=None):
@@ -234,8 +166,6 @@ class IPySlurm(magic.Magics):
             'rm': 'remove',
             'rmdir': 'rmdir',
             'symlink': 'symlink'}
-        if self._ssh is None:
-            raise client.AuthenticationException('Please login using %slogin')
         opts, _ = self.parse_options(line, 'vdi:', 'verbose', 'dryrun', 'instructions=')
         verbose = 'v' in opts or 'verbose' in opts
         dryrun = 'd' in opts or 'dryrun' in opts
@@ -244,9 +174,7 @@ class IPySlurm(magic.Magics):
         if cell is not None:
             lines += cell.splitlines()
         lines = [line for line in lines if line.strip() and not line.lstrip().startswith('#')]
-        ssh = self._ssh if self._ssh_data is None else self._ssh_data
-        ftp = ssh.open_sftp()
-        try:
+        with self._slurm.ftp() as (ssh, ftp):
             for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=not verbose or len(lines) < 2):
                 argv = line.split()
                 command = commands.get(argv[0])
@@ -318,14 +246,10 @@ class IPySlurm(magic.Magics):
                     print(output)
                 elif argv[0] in ['ls', 'lls'] and not dryrun:
                     print('\n'.join(output))
-        except KeyboardInterrupt:
-            pass
-        finally:
-            ftp.close()
 
     @magic.line_magic
     def sinteract(self, line=''):
-        self._ssh.invoke_shell()
+        self._slurm.interact()
 
     @magic.line_magic
     def slogin(self, line=''):
@@ -338,32 +262,9 @@ class IPySlurm(magic.Magics):
             server = input('Server: ')
         if username is None:
             username = getpass.getuser()
-        try:
-            print('Logging in to {}@{}'.format(username, server))
-            self._ssh = client.SSHClient()
-            self._ssh.connect(server, username, password)
-            self._ssh.get_transport().set_keepalive(30)
-        except:  # noqa: E722
-            self._ssh = None
-            raise
-        if server_data is not None:
-            try:
-                sys.stdout.flush()
-                print('Please wait for a new verification code before logging in to {}'.format(server_data), file=sys.stderr, flush=True)
-                print('Logging in to {}@{}'.format(username, server_data))
-                self._ssh_data = client.SSHClient()
-                self._ssh_data.connect(server_data, username, password)
-                self._ssh_data.get_transport().set_keepalive(30)
-            except:  # noqa: E722
-                self._ssh_data = None
-                raise
-        return self
+        self._slurm.login(server, username, password, server_data)
+        return self._slurm
 
     @magic.line_magic
     def slogout(self, line=''):
-        if self._ssh is not None:
-            print('Logging out of {}'.format(self._ssh.get_server()))
-        self._ssh = None
-        if self._ssh_data is not None:
-            print('Logging out of {}'.format(self._ssh_data.get_server()))
-        self._ssh_data = None
+        self._slurm.logout()
