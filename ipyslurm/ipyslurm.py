@@ -140,7 +140,6 @@ class IPySlurm(magic.Magics):
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('--quiet', action='store_true', help='')
     @magic_arguments.argument('--dryrun', action='store_true', help='')
-    @magic_arguments.argument('--instructions', nargs='*', default=[], help='')
     @magic.cell_magic
     def sftp(self, line, cell):
         """Commands: cd, chmod, chown, get, lls, lmkdir, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
@@ -165,10 +164,7 @@ class IPySlurm(magic.Magics):
             'rmdir': 'rmdir',
             'symlink': 'symlink'}
         args = magic_arguments.parse_argstring(self.sftp, line)
-        lines = list(args.instructions)
-        if cell is not None:
-            lines += cell.splitlines()
-        lines = [line for line in lines if line.strip() and not line.lstrip().startswith('#')]
+        lines = [line for line in cell.splitlines() if line.strip() and not line.lstrip().startswith('#')]
         with self._slurm.ftp() as (ssh, ftp):
             for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=args.quiet or len(lines) < 2):
                 argv = line.split()
