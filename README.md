@@ -12,36 +12,7 @@ See [tutorial notebook](https://github.com/auneri/ipyslurm/tree/master/examples/
 
 ## Magic Commands
 
-```
-%slogin [-s | --server <arg>]
-        [-u | --username <arg>]
-        [-p | --password <arg>]
-        [-d | --data-server <arg>]
-```
+Line magics: `slogin`, `slogout`, `sinteract`  
+Cell magics: `sbash`, `sbatch`, `sftp`
 
-```
-%slogout
-```
-
-```
-%sinteract
-```
-
-```
-%%sbash [-p | --period <arg>]
-        [-t | --timeout <arg>]
-        [-so | --stdout <arg>]
-        [-se | --stderr <arg>]
-```
-
-```
-%%sbatch [-w | --wait]
-         [-t | --tail <arg>]
-         [-a | --args <arg>]
-```
-
-```
-%%sftp [-v | --verbose]
-       [-d | --dryrun]
-       [-i | --instructions <arg>]
-```
+Use [?](http://ipython.readthedocs.io/en/stable/interactive/tutorial.html#exploring-your-objects) to get help on individual commands.

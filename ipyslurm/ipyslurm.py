@@ -87,13 +87,14 @@ class IPySlurm(magic.Magics):
         self._slurm = client.Slurm()
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('--period', type=float, help='')
-    @magic_arguments.argument('--timeout', type=float, help='')
-    @magic_arguments.argument('--stdout', help='')
-    @magic_arguments.argument('--stderr', help='')
+    @magic_arguments.argument('--period', type=float, metavar='SECONDS', help='Repeat execution with a given periodicity')
+    @magic_arguments.argument('--timeout', type=float, metavar='SECONDS', help='Timeout for when used with --period')
+    @magic_arguments.argument('--stdout', metavar='LIST', help='Variable to store stdout')
+    @magic_arguments.argument('--stderr', metavar='LIST', help='Variable to store stderr')
     @magic.needs_local_scope
     @magic.cell_magic
     def sbash(self, line, cell):
+        """Execute a bash script on server."""
         args = magic_arguments.parse_argstring(self.sbash, line)
         start = timeit.default_timer()
         for stdouts, stderrs in self._slurm.bash(cell.splitlines(), verbose=args.stdout is None and args.stderr is None):
@@ -113,11 +114,12 @@ class IPySlurm(magic.Magics):
             self.shell.user_ns.update({args.stderr: stderrs})
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('--wait', action='store_true', help='')
-    @magic_arguments.argument('--tail', type=int, help='')
-    @magic_arguments.argument('--args', nargs='*', help='')
+    @magic_arguments.argument('--wait', action='store_true', help='Block until execution is complete')
+    @magic_arguments.argument('--tail', type=int, metavar='N', help='Block and print last N lines of the log')
+    @magic_arguments.argument('--args', nargs='*', metavar='ARG', help='Additional arguments to sbatch')
     @magic.cell_magic
     def sbatch(self, line, cell):
+        """Submit a batch script to Slurm."""
         args = magic_arguments.parse_argstring(self.sbatch, line)
         job = self._slurm.batch(cell.splitlines(), args.args)
         if args.wait or args.tail is not None:
@@ -138,12 +140,13 @@ class IPySlurm(magic.Magics):
                 self._slurm._ssh.exec_command('scancel {}'.format(job))
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('--quiet', action='store_true', help='')
-    @magic_arguments.argument('--dry-run', action='store_true', help='')
+    @magic_arguments.argument('--quiet', action='store_true', help='Disable progress bar')
+    @magic_arguments.argument('--dry-run', action='store_true', help='Perform a trial run without making changes')
     @magic.cell_magic
     def sftp(self, line, cell):
-        """Commands: cd, chmod, chown, get, lls, lmkdir, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
+        """File transfer over secure shell.
 
+        Supported commands: cd, chmod, chown, get, lls, lmkdir, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
         commands = {
@@ -243,16 +246,18 @@ class IPySlurm(magic.Magics):
         self._slurm.interact()
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('server', help='')
-    @magic_arguments.argument('--username', help='')
-    @magic_arguments.argument('--password', help='')
-    @magic_arguments.argument('--data-server', help='')
+    @magic_arguments.argument('server', help='Address of server')
+    @magic_arguments.argument('--username', help='Username, interactively requested if not provided')
+    @magic_arguments.argument('--password', help='Password, interactively requested if not provided')
+    @magic_arguments.argument('--data-server', metavar='ADDRESS', help='Address of server for data transfers')
     @magic.line_magic
     def slogin(self, line):
+        """Login to server."""
         args = magic_arguments.parse_argstring(self.slogin, line)
         self._slurm.login(args.server, args.username, args.password, args.data_server)
         return self._slurm
 
     @magic.line_magic
     def slogout(self, line):
+        """Logout of server."""
         self._slurm.logout()
