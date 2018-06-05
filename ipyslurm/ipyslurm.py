@@ -204,8 +204,7 @@ class IPySlurm(magic.Magics):
                     if tail is not None and details['JobState'] in ['RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED']:
                         self._ssh.exec_command('tail --lines={} {}'.format(tail, details['StdOut']))
                     else:
-                        for key in keys:
-                            print('{1:>{0}}: {2}'.format(fill, key, details[key]))
+                        print('\n'.join('{1:>{0}}: {2}'.format(fill, key, details[key]) for key in keys))
                     if details['JobState'] not in ['PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING']:
                         break
             except KeyboardInterrupt:
