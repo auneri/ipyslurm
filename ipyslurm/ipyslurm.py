@@ -14,7 +14,6 @@ import timeit
 from IPython.core import magic, magic_arguments
 from IPython.display import clear_output
 from six import print_ as print  # noqa: A001
-from six.moves import input
 from tqdm import tqdm_notebook
 
 from . import client
@@ -249,15 +248,13 @@ class IPySlurm(magic.Magics):
         self._slurm.interact()
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('--server', help='')
+    @magic_arguments.argument('server', help='')
     @magic_arguments.argument('--username', help='')
     @magic_arguments.argument('--password', help='')
     @magic_arguments.argument('--data-server', help='')
     @magic.line_magic
     def slogin(self, line):
         args = magic_arguments.parse_argstring(self.slogin, line)
-        if args.server is None:
-            args.server = input('Server: ')
         if args.username is None:
             args.username = getpass.getuser()
         self._slurm.login(args.server, args.username, args.password, args.data_server)
