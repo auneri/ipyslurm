@@ -28,7 +28,7 @@ class Slurm(object):
         servers = [ssh.get_server() for ssh in [self._ssh, self._ssh_data] if ssh is not None]
         return 'Logged in to {}'.format(' and '.join(servers)) if servers else 'Not logged in to server'
 
-    def bash(self, lines, verbose=True):
+    def bash(self, lines, *args, **kwargs):
         if self._ssh is None:
             raise AuthenticationException('Not logged in to server')
         shebangs = [i for i, line in enumerate(lines) if line.startswith('#!')]
@@ -48,7 +48,7 @@ class Slurm(object):
             if command_init:
                 self._ssh.exec_command(command_init, verbose=False)
             while True:
-                yield self._ssh.exec_command(command, verbose=verbose)
+                yield self._ssh.exec_command(command, *args, **kwargs)
         except KeyboardInterrupt:
             pass
         finally:
