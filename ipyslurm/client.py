@@ -105,7 +105,9 @@ class Slurm(object):
     def interact(self):
         self._ssh.invoke_shell()
 
-    def login(self, server, username, password=None, server_data=None):
+    def login(self, server, username=None, password=None, server_data=None):
+        if username is None:
+            username = getpass.getuser()
         try:
             print('Logging in to {}@{}'.format(username, server))
             self._ssh = SSHClient()

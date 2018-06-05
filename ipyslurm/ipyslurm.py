@@ -3,7 +3,6 @@
 from __future__ import absolute_import, division, print_function
 
 import datetime
-import getpass
 import importlib
 import os
 import stat
@@ -255,8 +254,6 @@ class IPySlurm(magic.Magics):
     @magic.line_magic
     def slogin(self, line):
         args = magic_arguments.parse_argstring(self.slogin, line)
-        if args.username is None:
-            args.username = getpass.getuser()
         self._slurm.login(args.server, args.username, args.password, args.data_server)
         return self._slurm
 
