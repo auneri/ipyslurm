@@ -11,7 +11,7 @@ import sys
 import time
 import timeit
 
-from IPython.core import magic
+from IPython.core import magic, magic_arguments
 from IPython.display import clear_output
 from six import print_ as print  # noqa: A001
 from six.moves import input
@@ -88,45 +88,41 @@ class IPySlurm(magic.Magics):
         super(IPySlurm, self).__init__(*args, **kwargs)
         self._slurm = client.Slurm()
 
+    @magic_arguments.magic_arguments()
+    @magic_arguments.argument('--period', type=float, help='')
+    @magic_arguments.argument('--timeout', type=float, help='')
+    @magic_arguments.argument('--stdout', help='')
+    @magic_arguments.argument('--stderr', help='')
     @magic.needs_local_scope
     @magic.cell_magic
-    def sbash(self, line='', cell=None):
-        opts, _ = self.parse_options(line, 'p:t:so:se:', 'period=', 'timeout=', 'stdout=', 'stderr=')
-        stdout = opts.get('so', None) or opts.get('stdout', None)
-        stderr = opts.get('se', None) or opts.get('stderr', None)
-        period = opts.get('p', None) or opts.get('period', None)
-        timeout = opts.get('t', None) or opts.get('timeout', None)
-        if period is not None:
-            period = float(period)
-        if timeout is not None:
-            timeout = float(timeout)
+    def sbash(self, line, cell):
+        args = magic_arguments.parse_argstring(self.sbash, line)
         start = timeit.default_timer()
-        for stdouts, stderrs in self._slurm.bash(cell.splitlines(), verbose=stdout is None and stderr is None):
+        for stdouts, stderrs in self._slurm.bash(cell.splitlines(), verbose=args.stdout is None and args.stderr is None):
             elapsed = timeit.default_timer() - start
-            if timeout is not None and elapsed > timeout:
+            if args.timeout is not None and elapsed > args.timeout:
                 print('\nsbash terminated after {:.1f} seconds'.format(elapsed))
-            elif period is not None:
+            elif args.period is not None:
                 sys.stdout.flush()
                 sys.stderr.flush()
-                time.sleep(period)
+                time.sleep(args.period)
                 clear_output(wait=True)
                 continue
             break
-        if stdout is not None:
-            self.shell.user_ns.update({stdout: stdouts})
-        if stderr is not None:
-            self.shell.user_ns.update({stderr: stderrs})
+        if args.stdout is not None:
+            self.shell.user_ns.update({args.stdout: stdouts})
+        if args.stderr is not None:
+            self.shell.user_ns.update({args.stderr: stderrs})
 
+    @magic_arguments.magic_arguments()
+    @magic_arguments.argument('--wait', action='store_true', help='')
+    @magic_arguments.argument('--tail', type=int, help='')
+    @magic_arguments.argument('--args', nargs='*', help='')
     @magic.cell_magic
-    def sbatch(self, line='', cell=None):
-        opts, _ = self.parse_options(line, 'wt:a:', 'wait', 'tail=', 'args=')
-        wait = 'w' in opts or 'wait' in opts
-        tail = opts.get('t', None) or opts.get('tail', None)
-        args = opts.get('a', None) or opts.get('args', None)
-        if tail is not None:
-            tail = int(tail)
-        job = self._slurm.batch(cell.splitlines(), args)
-        if wait or tail is not None:
+    def sbatch(self, line, cell):
+        args = magic_arguments.parse_argstring(self.sbatch, line)
+        job = self._slurm.batch(cell.splitlines(), args.args)
+        if args.wait or args.tail is not None:
             keys = 'JobName', 'JobId', 'JobState', 'SubmitTime', 'StartTime', 'RunTime'
             fill = max(len(i) for i in keys)
             try:
@@ -134,8 +130,8 @@ class IPySlurm(magic.Magics):
                     stdouts, _ = self._slurm._ssh.exec_command('scontrol show jobid {}'.format(job), verbose=False)
                     details = dict(line.split('=', 1) for line in '\n'.join(stdouts).split())
                     clear_output(wait=True)
-                    if tail is not None and details['JobState'] in ['RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED']:
-                        self._slurm._ssh.exec_command('tail --lines={} {}'.format(tail, details['StdOut']))
+                    if args.tail is not None and details['JobState'] in ['RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED']:
+                        self._slurm._ssh.exec_command('tail --lines={} {}'.format(args.tail, details['StdOut']))
                     else:
                         print('\n'.join('{1:>{0}}: {2}'.format(fill, key, details[key]) for key in keys))
                     if details['JobState'] not in ['PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING']:
@@ -143,9 +139,13 @@ class IPySlurm(magic.Magics):
             except KeyboardInterrupt:
                 self._slurm._ssh.exec_command('scancel {}'.format(job))
 
+    @magic_arguments.magic_arguments()
+    @magic_arguments.argument('-v', '--verbose', action='store_true', help='')
+    @magic_arguments.argument('--dryrun', action='store_true', help='')
+    @magic_arguments.argument('--instructions', nargs='*', default=[], help='')
     @magic.cell_magic
-    def sftp(self, line='', cell=None):
-        """Commands: cd, chmod, chown, get, lls, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
+    def sftp(self, line, cell):
+        """Commands: cd, chmod, chown, get, lls, lmkdir, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
 
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
@@ -166,16 +166,13 @@ class IPySlurm(magic.Magics):
             'rm': 'remove',
             'rmdir': 'rmdir',
             'symlink': 'symlink'}
-        opts, _ = self.parse_options(line, 'vdi:', 'verbose', 'dryrun', 'instructions=')
-        verbose = 'v' in opts or 'verbose' in opts
-        dryrun = 'd' in opts or 'dryrun' in opts
-        instructions = opts.get('i', '') or opts.get('instructions', '')
-        lines = instructions.splitlines()
+        args = magic_arguments.parse_argstring(self.sftp, line)
+        lines = list(args.instructions)
         if cell is not None:
             lines += cell.splitlines()
         lines = [line for line in lines if line.strip() and not line.lstrip().startswith('#')]
         with self._slurm.ftp() as (ssh, ftp):
-            for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=not verbose or len(lines) < 2):
+            for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=not args.verbose or len(lines) < 2):
                 argv = line.split()
                 command = commands.get(argv[0])
                 if command is None:
@@ -191,7 +188,7 @@ class IPySlurm(magic.Magics):
                         raise ValueError('get [-ra] remote_file local_file')
                     local, remote = normalize(argv[2]), normalize(argv[1], ssh)
                     if stat.S_ISDIR(ftp.stat(remote).st_mode):
-                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0), unit='op', disable=not verbose)
+                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0), unit='op', disable=not args.verbose)
                         for dirpath, _, filenames in walk(ftp, remote):
                             root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
                             try:
@@ -199,13 +196,13 @@ class IPySlurm(magic.Magics):
                             except OSError:
                                 pass
                             for filename in filenames:
-                                get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume, dryrun)
+                                get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume, args.dryrun)
                                 pbar.update()
                             if not recurse:
                                 break
                         pbar.close()
                     else:
-                        get(ftp, remote, local, resume, dryrun)
+                        get(ftp, remote, local, resume, args.dryrun)
                 elif argv[0] == 'put':
                     recurse, resume = False, False
                     for arg in list(argv):
@@ -217,7 +214,7 @@ class IPySlurm(magic.Magics):
                         raise ValueError('put [-ra] local_file remote_file')
                     local, remote = normalize(argv[1]), normalize(argv[2], ssh)
                     if os.path.isdir(local):
-                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0), unit='op', disable=not verbose)
+                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0), unit='op', disable=not args.verbose)
                         for dirpath, _, filenames in os.walk(local):
                             root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
                             try:
@@ -225,46 +222,47 @@ class IPySlurm(magic.Magics):
                             except OSError:
                                 pass
                             for filename in filenames:
-                                put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume, dryrun)
+                                put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume, args.dryrun)
                                 pbar.update()
                             if not recurse:
                                 break
                         pbar.close()
                     else:
-                        put(ftp, local, remote, resume, dryrun)
+                        put(ftp, local, remote, resume, args.dryrun)
                 elif argv[0] in ['lls', 'lmkdir', 'lpwd']:
-                    if dryrun:
+                    if args.dryrun:
                         print(' '.join(argv))
                     else:
                         output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
                 else:
-                    if dryrun:
+                    if args.dryrun:
                         print(' '.join(argv))
                     else:
                         output = getattr(ftp, command)(*argv[1:])
-                if argv[0] in ['pwd', 'lpwd'] and not dryrun:
+                if argv[0] in ['pwd', 'lpwd'] and not args.dryrun:
                     print(output)
-                elif argv[0] in ['ls', 'lls'] and not dryrun:
+                elif argv[0] in ['ls', 'lls'] and not args.dryrun:
                     print('\n'.join(output))
 
     @magic.line_magic
-    def sinteract(self, line=''):
+    def sinteract(self, line):
         self._slurm.interact()
 
+    @magic_arguments.magic_arguments()
+    @magic_arguments.argument('--server', help='')
+    @magic_arguments.argument('--username', help='')
+    @magic_arguments.argument('--password', help='')
+    @magic_arguments.argument('--data-server', help='')
     @magic.line_magic
-    def slogin(self, line=''):
-        opts, _ = self.parse_options(line, 's:u:p:d:', 'server=', 'username=', 'password=', 'data-server=')
-        server = opts.get('s', None) or opts.get('server', None)
-        username = opts.get('u', None) or opts.get('username', None)
-        password = opts.get('p', None) or opts.get('password', None)
-        server_data = opts.get('d', None) or opts.get('data-server', None)
-        if server is None:
-            server = input('Server: ')
-        if username is None:
-            username = getpass.getuser()
-        self._slurm.login(server, username, password, server_data)
+    def slogin(self, line):
+        args = magic_arguments.parse_argstring(self.slogin, line)
+        if args.server is None:
+            args.server = input('Server: ')
+        if args.username is None:
+            args.username = getpass.getuser()
+        self._slurm.login(args.server, args.username, args.password, args.data_server)
         return self._slurm
 
     @magic.line_magic
-    def slogout(self, line=''):
+    def slogout(self, line):
         self._slurm.logout()
