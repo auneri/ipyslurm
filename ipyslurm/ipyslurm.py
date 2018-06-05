@@ -139,7 +139,7 @@ class IPySlurm(magic.Magics):
                 self._slurm._ssh.exec_command('scancel {}'.format(job))
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('-v', '--verbose', action='store_true', help='')
+    @magic_arguments.argument('--quiet', action='store_true', help='')
     @magic_arguments.argument('--dryrun', action='store_true', help='')
     @magic_arguments.argument('--instructions', nargs='*', default=[], help='')
     @magic.cell_magic
@@ -171,7 +171,7 @@ class IPySlurm(magic.Magics):
             lines += cell.splitlines()
         lines = [line for line in lines if line.strip() and not line.lstrip().startswith('#')]
         with self._slurm.ftp() as (ssh, ftp):
-            for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=not args.verbose or len(lines) < 2):
+            for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=args.quiet or len(lines) < 2):
                 argv = line.split()
                 command = commands.get(argv[0])
                 if command is None:
@@ -187,7 +187,7 @@ class IPySlurm(magic.Magics):
                         raise ValueError('get [-ra] remote_file local_file')
                     local, remote = normalize(argv[2]), normalize(argv[1], ssh)
                     if stat.S_ISDIR(ftp.stat(remote).st_mode):
-                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0), unit='op', disable=not args.verbose)
+                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0), unit='op', disable=args.quiet)
                         for dirpath, _, filenames in walk(ftp, remote):
                             root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
                             try:
@@ -213,7 +213,7 @@ class IPySlurm(magic.Magics):
                         raise ValueError('put [-ra] local_file remote_file')
                     local, remote = normalize(argv[1]), normalize(argv[2], ssh)
                     if os.path.isdir(local):
-                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0), unit='op', disable=not args.verbose)
+                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0), unit='op', disable=args.quiet)
                         for dirpath, _, filenames in os.walk(local):
                             root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
                             try:
