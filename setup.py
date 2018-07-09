@@ -16,7 +16,7 @@ def readme():
 
 setuptools.setup(
     name='ipyslurm',
-    version='1.0.0.dev',
+    version='1.0.0',
     description='IPython extension for interacting with the Slurm Workload Manager from Jupyter notebook',
     long_description=readme(),
     long_description_content_type='text/markdown',
