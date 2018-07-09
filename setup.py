@@ -19,6 +19,7 @@ setuptools.setup(
     version='1.0.0.dev',
     description='IPython extension for interacting with the Slurm Workload Manager from Jupyter notebook',
     long_description=readme(),
+    long_description_content_type='text/markdown',
     url='https://github.com/auneri/ipyslurm',
     author='Ali Uneri',
     license='MIT',
@@ -33,4 +34,5 @@ setuptools.setup(
         'notebook',
         'paramiko',
         'six',
-        'tqdm'])
+        'tqdm'],
+    python_requires='>=2.7')
