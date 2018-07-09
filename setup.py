@@ -20,7 +20,7 @@ setuptools.setup(
     description='IPython extension for interacting with the Slurm Workload Manager from Jupyter notebook',
     long_description=readme(),
     long_description_content_type='text/markdown',
-    url='https://github.com/auneri/ipyslurm',
+    url='https://auneri.github.io/ipyslurm',
     author='Ali Uneri',
     license='MIT',
     classifiers=[
