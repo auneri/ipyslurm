@@ -49,8 +49,6 @@ class Slurm(object):
                 self._ssh.exec_command(command_init, verbose=False)
             while True:
                 yield self._ssh.exec_command(command, *args, **kwargs)
-        except KeyboardInterrupt:
-            pass
         finally:
             if command_del:
                 self._ssh.exec_command(command_del, verbose=False)
@@ -93,8 +91,6 @@ class Slurm(object):
         ftp = ssh.open_sftp()
         try:
             yield ssh, ftp
-        except KeyboardInterrupt:
-            pass
         finally:
             ftp.close()
 

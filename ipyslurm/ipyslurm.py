@@ -97,17 +97,20 @@ class IPySlurm(magic.Magics):
         """Execute a bash script on server."""
         args = magic_arguments.parse_argstring(self.sbash, line)
         start = timeit.default_timer()
-        for stdouts, stderrs in self._slurm.bash(cell.splitlines(), verbose=args.stdout is None and args.stderr is None):
-            elapsed = timeit.default_timer() - start
-            if args.timeout is not None and elapsed > args.timeout:
-                print('\nsbash terminated after {:.1f} seconds'.format(elapsed))
-            elif args.period is not None:
-                sys.stdout.flush()
-                sys.stderr.flush()
-                time.sleep(args.period)
-                clear_output(wait=True)
-                continue
-            break
+        try:
+            for stdouts, stderrs in self._slurm.bash(cell.splitlines(), verbose=args.stdout is None and args.stderr is None):
+                elapsed = timeit.default_timer() - start
+                if args.timeout is not None and elapsed > args.timeout:
+                    print('\nsbash terminated after {:.1f} seconds'.format(elapsed))
+                elif args.period is not None:
+                    sys.stdout.flush()
+                    sys.stderr.flush()
+                    time.sleep(args.period)
+                    clear_output(wait=True)
+                    continue
+                break
+        except KeyboardInterrupt:
+            pass
         if args.stdout is not None:
             self.shell.user_ns.update({args.stdout: stdouts})
         if args.stderr is not None:
