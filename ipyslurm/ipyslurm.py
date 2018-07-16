@@ -264,3 +264,13 @@ class IPySlurm(magic.Magics):
     def slogout(self, line):
         """Logout of server."""
         self._slurm.logout()
+
+    @magic_arguments.magic_arguments()
+    @magic_arguments.argument('filepath', help='Path of file')
+    @magic_arguments.argument('--append', action='store_true', help='Append contents of the cell to an existing file')
+    @magic.cell_magic
+    def swritefile(self, line, cell):
+        args = magic_arguments.parse_argstring(self.swritefile, line)
+        lines = ['cat << \EOF {} {}'.format('>>' if args.append else '>', args.filepath)] + cell.splitlines() + ['EOF']
+        for _ in self._slurm.bash(lines, verbose=True):
+            break
