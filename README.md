@@ -7,7 +7,7 @@
 
 ## Getting Started
 
-Install using `pip install ipyslurm`.
+Install using `pip install ipyslurm` or `conda install -c conda-forge ipyslurm`.
 
 See [tutorial notebook](https://github.com/auneri/ipyslurm/tree/master/examples/tutorial.ipynb) for basic usage.
 
