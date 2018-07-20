@@ -2,7 +2,8 @@
 
 [IPython extension](https://ipython.readthedocs.io/en/stable/config/extensions/index.html) for interacting with [Slurm Workload Manager](https://slurm.schedmd.com) from [Jupyter](https://jupyter.readthedocs.io).
 
-[![release](https://img.shields.io/github/release/auneri/ipyslurm.svg)](https://github.com/auneri/ipyslurm/releases)
+[![pypi](https://img.shields.io/pypi/v/ipyslurm.svg)](https://pypi.org/project/ipyslurm)
+[![conda-forge](https://img.shields.io/conda/vn/conda-forge/ipyslurm.svg)](https://anaconda.org/conda-forge/ipyslurm)
 [![license](https://img.shields.io/github/license/auneri/ipyslurm.svg)](https://github.com/auneri/ipyslurm/blob/master/LICENSE.md)
 
 ## Getting Started
