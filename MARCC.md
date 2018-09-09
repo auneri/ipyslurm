@@ -13,13 +13,13 @@ Modify `.bashrc` for faster cell execution:
 ```sh
 %%swritefile ~/.bashrc
 for script in /etc/profile.d/*.sh; do
-    # skip z01_mybalance and z02_homeQuota
+    # skip z01_sbalance
     if [[ $script != /etc/profile.d/z0[^0]*.sh ]]; then
         source $script
     fi
 done
 unset script
-# module loads in a single statement
+# load modules in a single statement
 module load cuda/9.2 python/3.6-anaconda
 # activate your conda environment
 source activate my_environment
