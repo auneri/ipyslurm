@@ -6,7 +6,9 @@ and the format of this document is based on [Keep a Changelog](http://keepachang
 ## Unreleased
 See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.0.0...master) for detailed changes.
 
-* `swritefile` magic
+* New `swritefile` magic
+* Usage tips on MARCC (09edb73)
+* Hosting on conda-forge (#2)
 * This very changelog!
 
 ## 1.0.0 -- 2018-07-09
