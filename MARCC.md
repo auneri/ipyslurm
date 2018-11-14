@@ -4,13 +4,13 @@
 
 Perform `ftp` operations over a dedicated server:
 
-```sh
+```shell
 %slogin gateway2.marcc.jhu.edu --username my_username --data-server dtn2.marcc.jhu.edu
 ```
 
 Modify `.bashrc` for faster cell execution:
 
-```sh
+```shell
 %%swritefile ~/.bashrc
 for script in /etc/profile.d/*.sh; do
     # skip z01_sbalance
@@ -27,7 +27,7 @@ source activate my_environment
 
 Display balance and disk usage:
 
-```sh
+```shell
 %%sbash
 sbalance
 du --human-readable --max-depth 2 --separate-dirs ~/my_folder | sort --human-numeric-sort --reverse
@@ -43,7 +43,7 @@ sbatch_args = ' '.join([
     '--cpus-per-task', '6'])
 ```
 
-```sh
+```shell
 %%sbatch --args "{sbatch_args}"
 #SBATCH --job-name my_script
 #SBATCH --time 01:00:00
