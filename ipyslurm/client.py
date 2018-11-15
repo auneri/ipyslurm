@@ -10,7 +10,7 @@ import sys
 from contextlib import contextmanager
 
 import paramiko
-from paramiko import AuthenticationException
+from paramiko import AuthenticationException, BadAuthenticationType, SSHException
 from six import print_ as print  # noqa: A001
 from six import string_types
 
@@ -144,14 +144,17 @@ class SSHClient(paramiko.SSHClient):
     def connect(self, server, username, password=None, *args, **kwargs):
         try:
             super(SSHClient, self).connect(server, username=username, password=password, *args, **kwargs)
-        except (AuthenticationException, paramiko.SSHException):
-            def handler(title, instructions, prompt_list):
-                if title:
-                    print(title.strip())
-                if instructions:
-                    print(instructions.strip())
-                return [show_input and input(prompt.strip()) or getpass.getpass(prompt.strip()) for prompt, show_input in prompt_list]
-            self.get_transport().auth_interactive_dumb(username=username, handler=handler)
+        except (AuthenticationException, SSHException):
+            try:
+                def handler(title, instructions, prompt_list):
+                    if title:
+                        print(title.strip())
+                    if instructions:
+                        print(instructions.strip())
+                    return [show_input and input(prompt.strip()) or getpass.getpass(prompt.strip()) for prompt, show_input in prompt_list]
+                self.get_transport().auth_interactive(username, handler)
+            except BadAuthenticationType:
+                self.get_transport().auth_password(username, getpass.getpass('Password:'))
         self._server = server
 
     def exec_command(self, command, *args, **kwargs):
