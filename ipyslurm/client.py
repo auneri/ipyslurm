@@ -71,12 +71,12 @@ class Slurm(object):
                 'echo -e "{}" > ~/.ipyslurm/batch_{}'.format(script, timestamp),
                 'chmod +x ~/.ipyslurm/batch_{}'.format(timestamp)]
             command += ['~/.ipyslurm/batch_{}'.format(timestamp)]
-        command_args = [match.group(1) for match in re.finditer('\{(.+?)\}', args)]
+        command_args = [match.group(1) for match in re.finditer('\\{(.+?)\\}', args)]
         stdouts, stderrs = self._ssh.exec_command(command_args, verbose=False)
         if stderrs:
             raise IOError('\n'.join(stderrs))
         for stdout in stdouts:
-            args = re.sub('\{(.+?)\}', stdout, args, count=1)
+            args = re.sub('\\{(.+?)\\}', stdout, args, count=1)
         command = ['sbatch {} --wrap="{}"'.format(args, '\n'.join(command))]
         stdouts, _ = self._ssh.exec_command(command_init + command)
         if not stdouts or not stdouts[-1].startswith('Submitted batch job '):

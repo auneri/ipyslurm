@@ -271,6 +271,6 @@ class IPySlurm(magic.Magics):
     @magic.cell_magic
     def swritefile(self, line, cell):
         args = magic_arguments.parse_argstring(self.swritefile, line)
-        lines = ['cat << \EOF {} {}'.format('>>' if args.append else '>', args.filepath)] + cell.splitlines() + ['EOF']
+        lines = ['cat << \\EOF {} {}'.format('>>' if args.append else '>', args.filepath)] + cell.splitlines() + ['EOF']
         for _ in self._slurm.bash(lines, verbose=True):
             break
