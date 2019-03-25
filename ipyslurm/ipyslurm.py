@@ -91,9 +91,9 @@ class IPySlurm(magic.Magics):
     @magic_arguments.argument('--timeout', type=float, metavar='SECONDS', help='Timeout for when used with --period')
     @magic_arguments.argument('--stdout', metavar='LIST', help='Variable to store stdout')
     @magic_arguments.argument('--stderr', metavar='LIST', help='Variable to store stderr')
-    @magic.needs_local_scope
     @magic.cell_magic
-    def sbash(self, line, cell):
+    @magic.needs_local_scope
+    def sbash(self, line, cell, local_ns):
         """Execute a bash script on server."""
         args = magic_arguments.parse_argstring(self.sbash, line)
         start = timeit.default_timer()
@@ -112,9 +112,9 @@ class IPySlurm(magic.Magics):
         except KeyboardInterrupt:
             pass
         if args.stdout is not None:
-            self.shell.user_ns.update({args.stdout: stdouts})
+            local_ns.update({args.stdout: stdouts})
         if args.stderr is not None:
-            self.shell.user_ns.update({args.stderr: stderrs})
+            local_ns.update({args.stderr: stderrs})
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('--wait', action='store_true', help='Block until execution is complete')
