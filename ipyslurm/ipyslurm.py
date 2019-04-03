@@ -9,6 +9,7 @@ import stat
 import sys
 import time
 import timeit
+import warnings
 
 from IPython.core import magic, magic_arguments
 from IPython.display import clear_output
@@ -257,7 +258,9 @@ class IPySlurm(magic.Magics):
     def slogin(self, line):
         """Login to server."""
         args = magic_arguments.parse_argstring(self.slogin, line)
-        self._slurm.login(args.server, args.username, args.password, args.data_server)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action='ignore', module='.*paramiko.*')
+            self._slurm.login(args.server, args.username, args.password, args.data_server)
         return self._slurm
 
     @magic.line_magic
