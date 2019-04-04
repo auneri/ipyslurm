@@ -6,13 +6,13 @@
 [![conda-forge](https://img.shields.io/conda/vn/conda-forge/ipyslurm.svg)](https://anaconda.org/conda-forge/ipyslurm)
 [![license](https://img.shields.io/github/license/auneri/ipyslurm.svg)](https://github.com/auneri/ipyslurm/blob/master/LICENSE.md)
 
-## Getting Started
+## Getting started
 
 Install using `pip install ipyslurm` or `conda install -c conda-forge ipyslurm`.
 
 See [tutorial notebook](https://github.com/auneri/ipyslurm/tree/master/examples/tutorial.ipynb) for basic usage.
 
-## Magic Commands
+## Magic commands
 
 Line magics: `slogin`, `slogout`, `sinteract`  
 Cell magics: `sbash`, `sbatch`, `sftp`, `swritefile`

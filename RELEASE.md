@@ -1,4 +1,4 @@
-# Release Instructions
+# ipyslurm Release Instructions
 
 1. Create a new tag
     * update `__version__` and `CHANGELOG` with commit with message "Release vX.X.X"
