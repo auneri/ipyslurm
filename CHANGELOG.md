@@ -7,6 +7,8 @@ and the format of this document is based on [Keep a Changelog](http://keepachang
 
 See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.1.0...master) for detailed changes.
 
+## 1.2.0 -- 2019-04-03
+
 * Support IPython v7.4 ([f50df94](https://github.com/auneri/ipyslurm/commit/f50df941d808147f3b6ac313f287d060bfa49984))
 
 ## 1.1.0 -- 2018-10-05
