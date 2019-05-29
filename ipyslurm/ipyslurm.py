@@ -167,7 +167,8 @@ class IPySlurm(magic.Magics):
             'symlink': 'symlink'}
         args = magic_arguments.parse_argstring(self.sftp, line)
         lines = [line for line in cell.splitlines() if line.strip() and not line.lstrip().startswith('#')]
-        with self._slurm.ftp() as (ssh, ftp):
+        with self._slurm.ftp() as (ssh, ftp), warnings.catch_warnings():
+            warnings.filterwarnings(action='ignore', module='.*paramiko.*')
             for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=args.quiet or len(lines) < 2):
                 argv = line.split()
                 command = commands.get(argv[0])
