@@ -9,9 +9,9 @@ import warnings
 
 from IPython.core import magic, magic_arguments
 from IPython.display import clear_output
-from tqdm import tqdm_notebook
 
 from . import client
+from . import progress
 
 
 def get(ftp, remote, local, resume=False):
@@ -160,7 +160,8 @@ class IPySlurm(magic.Magics):
         lines = [line for line in cell.splitlines() if line.strip() and not line.lstrip().startswith('#')]
         with self._slurm.ftp() as (ssh, ftp), warnings.catch_warnings():
             warnings.filterwarnings(action='ignore', module='.*paramiko.*')
-            for line in tqdm_notebook(lines, desc='Progress', unit='op', disable=args.quiet or len(lines) < 2):
+            pbars = [progress.ProgressBar(hide=args.quiet or not any(x.startswith(y) for y in ('get', 'put'))) for x in lines]
+            for line, pbar in zip(lines, pbars):
                 argv = line.split()
                 command = commands.get(argv[0])
                 if command is None:
@@ -176,7 +177,7 @@ class IPySlurm(magic.Magics):
                         raise ValueError('get [-ra] remote_file local_file')
                     local, remote = normalize(argv[2]), normalize(argv[1], ssh)
                     if stat.S_ISDIR(ftp.stat(remote).st_mode):
-                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0), unit='op', disable=args.quiet)
+                        pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0))
                         for dirpath, _, filenames in walk(ftp, remote):
                             root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
                             try:
@@ -202,7 +203,7 @@ class IPySlurm(magic.Magics):
                         raise ValueError('put [-ra] local_file remote_file')
                     local, remote = normalize(argv[1]), normalize(argv[2], ssh)
                     if os.path.isdir(local):
-                        pbar = tqdm_notebook(total=sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0), unit='op', disable=args.quiet)
+                        pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0))
                         for dirpath, _, filenames in os.walk(local):
                             root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
                             try:

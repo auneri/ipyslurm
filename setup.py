@@ -36,6 +36,5 @@ setuptools.setup(
         'ipython',
         'ipywidgets',
         'notebook',
-        'paramiko',
-        'tqdm'],
+        'paramiko'],
     python_requires='>=3')
