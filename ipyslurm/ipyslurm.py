@@ -93,8 +93,6 @@ class IPySlurm(magic.Magics):
                 if args.timeout is not None and elapsed > args.timeout:
                     print('\nsbash terminated after {:.1f} seconds'.format(elapsed))
                 elif args.period is not None:
-                    sys.stdout.flush()
-                    sys.stderr.flush()
                     time.sleep(args.period)
                     clear_output(wait=True)
                     continue

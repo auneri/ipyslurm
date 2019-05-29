@@ -165,9 +165,9 @@ class SSHClient(paramiko.SSHClient):
         stderrs = [line.strip('\n') for line in stderr]
         if verbose:
             if stdouts:
-                print('\n'.join(stdouts), file=sys.stdout)
+                print('\n'.join(stdouts), file=sys.stdout, flush=True)
             if stderrs:
-                print('\n'.join(stderrs), file=sys.stderr)
+                print('\n'.join(stderrs), file=sys.stderr, flush=True)
         return stdouts, stderrs
 
     def get_server(self):
