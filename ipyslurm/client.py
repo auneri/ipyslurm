@@ -136,9 +136,14 @@ class SSHClient(paramiko.SSHClient):
         self.close()
 
     def connect(self, server, username, password=None, *args, **kwargs):
+        self.close()
+        self._server = None
         try:
             super(SSHClient, self).connect(server, username=username, password=password, *args, **kwargs)
+            self._server = server
         except (AuthenticationException, SSHException):
+            pass
+        if self._server is None:
             try:
                 def handler(title, instructions, prompt_list):
                     if title:
