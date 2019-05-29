@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import os
 import re
 
@@ -32,7 +30,6 @@ setuptools.setup(
     license='MIT',
     classifiers=[
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3'],
     packages=setuptools.find_packages(),
     install_requires=[
@@ -40,6 +37,5 @@ setuptools.setup(
         'ipywidgets',
         'notebook',
         'paramiko',
-        'six',
         'tqdm'],
-    python_requires='>=2.7')
+    python_requires='>=3')

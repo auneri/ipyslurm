@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import datetime
 import getpass
 import platform
@@ -9,11 +7,9 @@ from contextlib import contextmanager
 
 import paramiko
 from paramiko import AuthenticationException, BadAuthenticationType, SSHException
-from six import print_ as print  # noqa: A001
-from six import string_types
 
 
-class Slurm(object):
+class Slurm():
 
     def __init__(self):
         self._ssh = None
@@ -157,7 +153,7 @@ class SSHClient(paramiko.SSHClient):
 
     def exec_command(self, command, *args, **kwargs):
         verbose = kwargs.pop('verbose', True)
-        if not isinstance(command, string_types):
+        if not isinstance(command, str):
             command = '\n'.join(command)
         _, stdout, stderr = super(SSHClient, self).exec_command(command, *args, **kwargs)
         stdouts = [line.strip('\n') for line in stdout]

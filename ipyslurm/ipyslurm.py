@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import datetime
 import importlib
 import os
@@ -11,7 +9,6 @@ import warnings
 
 from IPython.core import magic, magic_arguments
 from IPython.display import clear_output
-from six import print_ as print  # noqa: A001
 from tqdm import tqdm_notebook
 
 from . import client
