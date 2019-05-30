@@ -122,8 +122,8 @@ class IPySlurm(magic.Magics):
         args = magic_arguments.parse_argstring(self.sbatch, line)
         job = self._slurm.batch(cell.splitlines(), args.args)
         if args.wait or args.tail is not None:
-            keys = 'JobName', 'JobId', 'JobState', 'SubmitTime', 'StartTime', 'RunTime'
-            fill = max(len(i) for i in keys)
+            keys = 'JobName', 'JobId', 'JobState', 'Reason', 'SubmitTime', 'StartTime', 'RunTime'
+            keys_maxlen = max(len(i) for i in keys)
             try:
                 while True:
                     stdouts, _ = self._slurm._ssh.exec_command('scontrol show jobid {}'.format(job), verbose=False)
@@ -132,7 +132,7 @@ class IPySlurm(magic.Magics):
                     if args.tail is not None and details['JobState'] in ['RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED']:
                         self._slurm._ssh.exec_command('tail --lines={} {}'.format(args.tail, details['StdOut']))
                     else:
-                        print('\n'.join('{1:>{0}}: {2}'.format(fill, key, details[key]) for key in keys))
+                        print('\n'.join('{1:>{0}}: {2}'.format(keys_maxlen, key, details[key]) for key in keys))
                     if details['JobState'] not in ['PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING']:
                         break
             except KeyboardInterrupt:
