@@ -129,6 +129,7 @@ class IPySlurm(magic.Magics):
                         break
             except KeyboardInterrupt:
                 self._slurm._ssh.exec_command('scancel {}'.format(job))
+                print('Canceling job {}'.format(job), file=sys.stderr)
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('--quiet', action='store_true', help='Disable progress bar')
