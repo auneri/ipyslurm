@@ -14,7 +14,7 @@ from tqdm import tqdm_notebook
 from . import client
 
 
-def get(ftp, remote, local, resume=False, dryrun=False):
+def get(ftp, remote, local, resume=False):
     try:
         if not resume:
             raise IOError
@@ -23,12 +23,9 @@ def get(ftp, remote, local, resume=False, dryrun=False):
         if remote_timestamp > local_timestamp:
             raise IOError
     except IOError:
-        if dryrun:
-            print('get {} {}'.format(remote, local))
-        else:
-            ftp.get(remote, local)
-            stats = ftp.stat(remote)
-            os.utime(local, (stats.st_atime, stats.st_mtime))
+        ftp.get(remote, local)
+        stats = ftp.stat(remote)
+        os.utime(local, (stats.st_atime, stats.st_mtime))
 
 
 def normalize(path, ssh=None):
@@ -45,7 +42,7 @@ def normalize(path, ssh=None):
             raise OSError('Failed to find {}'.format(path))
 
 
-def put(ftp, local, remote, resume=False, dryrun=False):
+def put(ftp, local, remote, resume=False):
     try:
         if not resume:
             raise IOError
@@ -54,12 +51,9 @@ def put(ftp, local, remote, resume=False, dryrun=False):
         if local_timestamp > remote_timestamp:
             raise IOError
     except IOError:
-        if dryrun:
-            print('put {} {}'.format(local, remote))
-        else:
-            ftp.put(local, remote)
-            stats = os.stat(local)
-            ftp.utime(remote, (stats.st_atime, stats.st_mtime))
+        ftp.put(local, remote)
+        stats = os.stat(local)
+        ftp.utime(remote, (stats.st_atime, stats.st_mtime))
 
 
 def walk(ftp, remote):
@@ -140,7 +134,6 @@ class IPySlurm(magic.Magics):
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('--quiet', action='store_true', help='Disable progress bar')
-    @magic_arguments.argument('--dry-run', action='store_true', help='Perform a trial run without making changes')
     @magic.cell_magic
     def sftp(self, line, cell):
         """File transfer over secure shell.
@@ -193,13 +186,13 @@ class IPySlurm(magic.Magics):
                             except OSError:
                                 pass
                             for filename in filenames:
-                                get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume, args.dry_run)
+                                get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume)
                                 pbar.update()
                             if not recurse:
                                 break
                         pbar.close()
                     else:
-                        get(ftp, remote, local, resume, args.dry_run)
+                        get(ftp, remote, local, resume)
                 elif argv[0] == 'put':
                     recurse, resume = False, False
                     for arg in list(argv):
@@ -219,26 +212,20 @@ class IPySlurm(magic.Magics):
                             except OSError:
                                 pass
                             for filename in filenames:
-                                put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume, args.dry_run)
+                                put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume)
                                 pbar.update()
                             if not recurse:
                                 break
                         pbar.close()
                     else:
-                        put(ftp, local, remote, resume, args.dry_run)
+                        put(ftp, local, remote, resume)
                 elif argv[0] in ['lls', 'lmkdir', 'lpwd']:
-                    if args.dry_run:
-                        print(' '.join(argv))
-                    else:
-                        output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
+                    output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
                 else:
-                    if args.dry_run:
-                        print(' '.join(argv))
-                    else:
-                        output = getattr(ftp, command)(*argv[1:])
-                if argv[0] in ['pwd', 'lpwd'] and not args.dry_run:
+                    output = getattr(ftp, command)(*argv[1:])
+                if argv[0] in ['pwd', 'lpwd']:
                     print(output)
-                elif argv[0] in ['ls', 'lls'] and not args.dry_run:
+                elif argv[0] in ['ls', 'lls']:
                     print('\n'.join(output))
 
     @magic.line_magic
