@@ -33,8 +33,8 @@ setuptools.setup(
         'Programming Language :: Python :: 3'],
     packages=setuptools.find_packages(),
     install_requires=[
-        'ipython',
-        'ipywidgets',
-        'notebook',
-        'paramiko'],
+        'ipython>=7',
+        'ipywidgets>=7',
+        'notebook>=5',
+        'paramiko>=2'],
     python_requires='>=3')
