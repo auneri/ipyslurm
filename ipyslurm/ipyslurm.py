@@ -182,8 +182,10 @@ class IPySlurm(magic.Magics):
                             recurse |= 'r' in arg
                             resume |= 'a' in arg
                             argv.remove(arg)
-                    if len(argv) != 3:
-                        raise ValueError('get [-ra] remote_file local_file')
+                    if len(argv) == 2:
+                        argv.append(argv[-1])
+                    elif len(argv) != 3:
+                        raise ValueError('get [-ra] remote_file [local_file]')
                     local, remote = normalize(argv[2]), normalize(argv[1], ssh, ftp)
                     if stat.S_ISDIR(ftp.stat(remote).st_mode):
                         pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0))
@@ -208,8 +210,10 @@ class IPySlurm(magic.Magics):
                             recurse |= 'r' in arg
                             resume |= 'a' in arg
                             argv.remove(arg)
-                    if len(argv) != 3:
-                        raise ValueError('put [-ra] local_file remote_file')
+                    if len(argv) == 2:
+                        argv.append(argv[-1])
+                    elif len(argv) != 3:
+                        raise ValueError('put [-ra] local_file [remote_file]')
                     local, remote = normalize(argv[1]), normalize(argv[2], ssh, ftp)
                     if os.path.isdir(local):
                         pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0))
