@@ -10,8 +10,8 @@ import warnings
 from IPython.core import magic, magic_arguments
 from IPython.display import clear_output
 
-from . import client
-from . import progress
+from .client import Slurm
+from .progress import ProgressBar
 
 
 def get(ftp, remote, local, resume=False):
@@ -77,7 +77,7 @@ class IPySlurm(magic.Magics):
 
     def __init__(self, *args, **kwargs):
         super(IPySlurm, self).__init__(*args, **kwargs)
-        self._slurm = client.Slurm()
+        self._slurm = Slurm()
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('--period', type=float, metavar='SECONDS', help='Repeat execution with a given periodicity')
@@ -165,7 +165,7 @@ class IPySlurm(magic.Magics):
         lines = [line for line in cell.splitlines() if line.strip() and not line.lstrip().startswith('#')]
         with self._slurm.ftp() as (ssh, ftp), warnings.catch_warnings():
             warnings.filterwarnings(action='ignore', module='.*paramiko.*')
-            pbars = [progress.ProgressBar(hide=args.quiet or not any(x.startswith(y) for y in ('get', 'put'))) for x in lines]
+            pbars = [ProgressBar(hide=args.quiet or not any(x.startswith(y) for y in ('get', 'put'))) for x in lines]
             for line, pbar in zip(lines, pbars):
                 argv = line.split()
                 command = commands.get(argv[0])

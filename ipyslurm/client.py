@@ -34,10 +34,10 @@ class Slurm():
             script = '\n'.join(line.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for line in lines[slice(i, j)])
             command_init += [
                 'mkdir -p ~/.ipyslurm',
-                'echo -e "{}" > ~/.ipyslurm/bash_{}'.format(script, timestamp),
-                'chmod +x ~/.ipyslurm/bash_{}'.format(timestamp)]
-            command_del += ['rm ~/.ipyslurm/bash_{}'.format(timestamp)]
-            command += ['~/.ipyslurm/bash_{}'.format(timestamp)]
+                'echo -e "{}" > ~/.ipyslurm/sbash_{}'.format(script, timestamp),
+                'chmod +x ~/.ipyslurm/sbash_{}'.format(timestamp)]
+            command_del += ['rm ~/.ipyslurm/sbash_{}'.format(timestamp)]
+            command += ['~/.ipyslurm/sbash_{}'.format(timestamp)]
         try:
             if command_init:
                 self._ssh.exec_command(command_init, verbose=False)
@@ -62,9 +62,9 @@ class Slurm():
             script = '\n'.join(lines[slice(i, j)])
             command_init += [
                 'mkdir -p ~/.ipyslurm',
-                'echo -e "{}" > ~/.ipyslurm/batch_{}'.format(script, timestamp),
-                'chmod +x ~/.ipyslurm/batch_{}'.format(timestamp)]
-            command += ['~/.ipyslurm/batch_{}'.format(timestamp)]
+                'echo -e "{}" > ~/.ipyslurm/sbatch_{}'.format(script, timestamp),
+                'chmod +x ~/.ipyslurm/sbatch_{}'.format(timestamp)]
+            command += ['~/.ipyslurm/sbatch_{}'.format(timestamp)]
         command_args = [match.group(1) for match in re.finditer('\\{(.+?)\\}', args)]
         stdouts, stderrs = self._ssh.exec_command(command_args, verbose=False)
         if stderrs:
