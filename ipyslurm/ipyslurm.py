@@ -28,18 +28,21 @@ def get(ftp, remote, local, resume=False):
         os.utime(local, (stats.st_atime, stats.st_mtime))
 
 
-def normalize(path, ssh=None):
+def normalize(path, ssh=None, ftp=None):
     if path.startswith('"'):
         path = path.replace('"', '')
     elif path.startswith("'"):
         path = path.replace("'", '')
-    if ssh is None:
+    if None in (ssh, ftp):
         return os.path.abspath(os.path.expanduser(path))
     else:
-        try:
-            return ssh.exec_command('readlink -f {}'.format(path), verbose=False)[0][0]
-        except IndexError:
+        cwd = ftp.getcwd()
+        if cwd is not None:
+            path = '{}/{}'.format(cwd, path)
+        stdouts, _ = ssh.exec_command('readlink -f {}'.format(path), verbose=False)
+        if len(stdouts) != 1:
             raise OSError('Failed to find {}'.format(path))
+        return stdouts[0]
 
 
 def put(ftp, local, remote, resume=False):
@@ -137,7 +140,7 @@ class IPySlurm(magic.Magics):
     def sftp(self, line, cell):
         """File transfer over secure shell.
 
-        Supported commands: cd, chmod, chown, get, lls, lmkdir, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
+        Supported commands: cd, chmod, chown, get, lcd, lls, lmkdir, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
         commands = {
@@ -145,6 +148,7 @@ class IPySlurm(magic.Magics):
             'chmod': 'chmod',
             'chown': 'chown',
             'get': 'get',
+            'lcd': 'os.chdir',
             'lls': 'os.listdir',
             'lmkdir': 'os.mkdir',
             'ln': 'symlink',
@@ -167,7 +171,11 @@ class IPySlurm(magic.Magics):
                 command = commands.get(argv[0])
                 if command is None:
                     raise SyntaxError('"{}" is not supported'.format(argv[0]))
-                if argv[0] == 'get':
+                if argv[0] == 'cd':
+                    if len(argv) != 2:
+                        raise ValueError('cd remote_directory')
+                    output = getattr(ftp, command)(normalize(argv[1], ssh, ftp))
+                elif argv[0] == 'get':
                     recurse, resume = False, False
                     for arg in list(argv):
                         if arg.startswith('-'):
@@ -176,7 +184,7 @@ class IPySlurm(magic.Magics):
                             argv.remove(arg)
                     if len(argv) != 3:
                         raise ValueError('get [-ra] remote_file local_file')
-                    local, remote = normalize(argv[2]), normalize(argv[1], ssh)
+                    local, remote = normalize(argv[2]), normalize(argv[1], ssh, ftp)
                     if stat.S_ISDIR(ftp.stat(remote).st_mode):
                         pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote)) if recurse or i == 0))
                         for dirpath, _, filenames in walk(ftp, remote):
@@ -202,7 +210,7 @@ class IPySlurm(magic.Magics):
                             argv.remove(arg)
                     if len(argv) != 3:
                         raise ValueError('put [-ra] local_file remote_file')
-                    local, remote = normalize(argv[1]), normalize(argv[2], ssh)
+                    local, remote = normalize(argv[1]), normalize(argv[2], ssh, ftp)
                     if os.path.isdir(local):
                         pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0))
                         for dirpath, _, filenames in os.walk(local):
@@ -219,6 +227,10 @@ class IPySlurm(magic.Magics):
                         pbar.close()
                     else:
                         put(ftp, local, remote, resume)
+                elif argv[0] == 'lcd':
+                    if len(argv) != 2:
+                        raise ValueError('lcd local_directory')
+                    output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(normalize(argv[1]))
                 elif argv[0] in ['lls', 'lmkdir', 'lpwd']:
                     output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
                 else:
