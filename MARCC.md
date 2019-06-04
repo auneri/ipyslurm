@@ -30,10 +30,11 @@ Reuse `sbatch` arguments:
 
 ```python
 gpuk80 = ' '.join((
-    '--partition', 'gpuk80',
-    '--gres', 'gpu:1',
-    '--ntasks-per-node', '1',
-    '--cpus-per-task', '6'))
+    '--cpus-per-task 6',
+    '--gres gpu:1',
+    '--nodes 1',
+    '--ntasks-per-node 1',
+    '--partition gpuk80'))
 ```
 
 ```shell
