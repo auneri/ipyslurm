@@ -36,5 +36,5 @@ setuptools.setup(
         'ipython>=7',
         'ipywidgets>=7',
         'notebook>=5',
-        'paramiko>=2'],
+        'paramiko>=2.5'],
     python_requires='>=3')

@@ -5,7 +5,6 @@ import stat
 import sys
 import time
 import timeit
-import warnings
 
 from IPython.core import magic, magic_arguments
 from IPython.display import clear_output
@@ -163,8 +162,7 @@ class IPySlurm(magic.Magics):
             'symlink': 'symlink'}
         args = magic_arguments.parse_argstring(self.sftp, line)
         lines = [line for line in cell.splitlines() if line.strip() and not line.lstrip().startswith('#')]
-        with self._slurm.ftp() as (ssh, ftp), warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore', module='.*paramiko.*')
+        with self._slurm.ftp() as (ssh, ftp):
             pbars = [ProgressBar(hide=args.quiet or not any(x.startswith(y) for y in ('get', 'put'))) for x in lines]
             for line, pbar in zip(lines, pbars):
                 argv = line.split()
@@ -257,9 +255,7 @@ class IPySlurm(magic.Magics):
     def slogin(self, line):
         """Login to server."""
         args = magic_arguments.parse_argstring(self.slogin, line)
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore', module='.*paramiko.*')
-            self._slurm.login(args.server, args.username, args.password, args.data_server)
+        self._slurm.login(args.server, args.username, args.password, args.data_server)
         return self._slurm
 
     @magic.line_magic
