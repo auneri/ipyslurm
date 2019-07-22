@@ -124,11 +124,11 @@ class IPySlurm(magic.Magics):
                     stdouts, _ = self._slurm._ssh.exec_command('scontrol show jobid {}'.format(job), verbose=False)
                     details = dict(line.split('=', 1) for line in '\n'.join(stdouts).split())
                     clear_output(wait=True)
-                    if args.tail is not None and details['JobState'] in ['RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED']:
+                    if args.tail is not None and details['JobState'] in ('RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED'):
                         self._slurm._ssh.exec_command('tail --lines={} {}'.format(args.tail, details['StdOut']))
                     else:
                         print('\n'.join('{1:>{0}}: {2}'.format(keys_maxlen, key, details[key]) for key in keys))
-                    if details['JobState'] not in ['PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING']:
+                    if details['JobState'] not in ('PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING'):
                         break
             except KeyboardInterrupt:
                 self._slurm._ssh.exec_command('scancel {}'.format(job))
@@ -235,13 +235,13 @@ class IPySlurm(magic.Magics):
                     if len(argv) != 2:
                         raise ValueError('lcd local_directory')
                     output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(normalize(argv[1]))
-                elif argv[0] in ['lls', 'lmkdir', 'lpwd']:
+                elif argv[0] in ('lls', 'lmkdir', 'lpwd'):
                     output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
                 else:
                     output = getattr(ftp, command)(*argv[1:])
-                if argv[0] in ['pwd', 'lpwd']:
+                if argv[0] in ('pwd', 'lpwd'):
                     print(output)
-                elif argv[0] in ['ls', 'lls']:
+                elif argv[0] in ('ls', 'lls'):
                     print('\n'.join(output))
 
     @magic.line_magic

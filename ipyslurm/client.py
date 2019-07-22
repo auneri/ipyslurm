@@ -19,7 +19,7 @@ class Slurm():
         self.logout()
 
     def __repr__(self):
-        servers = [ssh.get_server() for ssh in [self._ssh, self._ssh_data] if ssh is not None]
+        servers = [ssh.get_server() for ssh in (self._ssh, self._ssh_data) if ssh is not None]
         return 'Logged in to {}'.format(' and '.join(servers)) if servers else 'Not logged in to server'
 
     def bash(self, lines, *args, **kwargs):
@@ -191,7 +191,7 @@ class SSHClient(paramiko.SSHClient):
 
             while True:
                 stdin = input()
-                if stdin in ['exit', 'quit', 'q']:
+                if stdin in ('exit', 'quit', 'q'):
                     break
                 channel.send('{}\n'.format(stdin))
         else:
@@ -220,7 +220,7 @@ class SSHClient(paramiko.SSHClient):
                             pass
                     if sys.stdin in r:
                         stdin = input()
-                        if stdin in ['exit', 'quit', 'q']:
+                        if stdin in ('exit', 'quit', 'q'):
                             break
                         channel.send('{}\n'.format(stdin))
             finally:
