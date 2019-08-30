@@ -29,16 +29,17 @@ du --human-readable --max-depth 2 --separate-dirs my_folder | sort --human-numer
 Reuse `sbatch` arguments:
 
 ```python
-gpuk80 = ' '.join((
-    '--cpus-per-task 6',
-    '--gres gpu:1',
-    '--nodes 1',
-    '--ntasks-per-node 1',
-    '--partition gpuk80'))
+def gpuk80(ngpu=1, **kwargs):
+    kwargs.setdefault('cpus-per-task', 6)
+    kwargs.setdefault('gres', 'gpu:{}'.format(ngpu))
+    kwargs.setdefault('nodes', 1)
+    kwargs.setdefault('ntasks-per-node', ngpu)
+    kwargs.setdefault('partition', 'gpuk80')
+    return ' '.join('--{} {}'.format(x, y) for x, y in kwargs.items())
 ```
 
 ```shell
-%%sbatch --args "{gpuk80}"
+%%sbatch --args "{gpuk80()}"
 #SBATCH --job-name my_script
 #SBATCH --time 01:00:00
 python my_script.py
