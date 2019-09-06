@@ -127,16 +127,15 @@ class IPySlurm(magic.Magics):
         job = self._slurm.batch(cell.splitlines(), args.args)
         if args.wait or args.tail is not None:
             keys = 'JobName', 'JobId', 'JobState', 'Reason', 'SubmitTime', 'StartTime', 'RunTime'
-            keys_maxlen = max(len(i) for i in keys)
             try:
                 while True:
                     stdouts, _ = self._slurm._ssh.exec_command('scontrol show jobid {}'.format(job), verbose=False)
-                    details = dict(line.split('=', 1) for line in '\n'.join(stdouts).split())
+                    details = dict(x.split('=', 1) for x in '\n'.join(stdouts).split())
                     clear_output(wait=True)
                     if args.tail is not None and details['JobState'] in ('RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED'):
                         self._slurm._ssh.exec_command('tail --lines={} {}'.format(args.tail, details['StdOut']))
                     else:
-                        print('\n'.join('{1:>{0}}: {2}'.format(keys_maxlen, key, details[key]) for key in keys))
+                        print('\n'.join('{1:>{0}}: {2}'.format(max(keys, key=len), x, details[x]) for x in keys))
                     if details['JobState'] not in ('PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING'):
                         break
             except KeyboardInterrupt:
@@ -173,7 +172,7 @@ class IPySlurm(magic.Magics):
             'rmdir': 'rmdir',
             'symlink': 'symlink'}
         args = magic_arguments.parse_argstring(self.sftp, line)
-        lines = [line for line in cell.splitlines() if line.strip() and not line.lstrip().startswith('#')]
+        lines = [x for x in cell.splitlines() if x.strip() and not x.lstrip().startswith('#')]
         with self._slurm.ftp() as (ssh, ftp):
             pbars = [ProgressBar(hide=args.quiet or not any(x.startswith(y) for y in ('get', 'put', 'rm'))) for x in lines]
             for line, pbar in zip(lines, pbars):
@@ -186,12 +185,9 @@ class IPySlurm(magic.Magics):
                         raise ValueError('cd remote_directory')
                     output = getattr(ftp, command)(normalize(argv[1], ssh, ftp))
                 elif argv[0] == 'get':
-                    recurse, resume = False, False
-                    for arg in list(argv):
-                        if arg.startswith('-'):
-                            recurse |= 'r' in arg
-                            resume |= 'a' in arg
-                            argv.remove(arg)
+                    recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
+                    resume = bool([x for x in argv if x.startswith('-') and 'a' in x])
+                    argv = [x for x in argv if not x.startswith('-')]
                     if len(argv) == 2:
                         argv.append(argv[-1])
                     elif len(argv) != 3:
@@ -215,12 +211,9 @@ class IPySlurm(magic.Magics):
                         get(ftp, remote, local, resume)
                         pbar.close(clear=True)
                 elif argv[0] == 'put':
-                    recurse, resume = False, False
-                    for arg in list(argv):
-                        if arg.startswith('-'):
-                            recurse |= 'r' in arg
-                            resume |= 'a' in arg
-                            argv.remove(arg)
+                    recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
+                    resume = bool([x for x in argv if x.startswith('-') and 'a' in x])
+                    argv = [x for x in argv if not x.startswith('-')]
                     if len(argv) == 2:
                         argv.append(argv[-1])
                     elif len(argv) != 3:

@@ -19,19 +19,19 @@ class Slurm():
         self.logout()
 
     def __repr__(self):
-        servers = [ssh.get_server() for ssh in (self._ssh, self._ssh_data) if ssh is not None]
+        servers = [x.get_server() for x in (self._ssh, self._ssh_data) if x is not None]
         return 'Logged in to {}'.format(' and '.join(servers)) if servers else 'Not logged in to server'
 
     def bash(self, lines, *args, **kwargs):
         if self._ssh is None:
             raise AuthenticationException('Not logged in to server')
-        shebangs = [i for i, line in enumerate(lines) if line.startswith('#!')]
+        shebangs = [i for i, x in enumerate(lines) if x.startswith('#!')]
         command = lines[:shebangs[0]] if shebangs else lines
         command_init = []
         command_del = []
         for i, j in zip(shebangs, shebangs[1:] + [None]):
             timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_{}'.format(i))
-            script = '\n'.join(line.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for line in lines[slice(i, j)])
+            script = '\n'.join(x.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for x in lines[slice(i, j)])
             command_init += [
                 'mkdir -p ~/.ipyslurm',
                 'echo -e "{}" > ~/.ipyslurm/sbash_{}'.format(script, timestamp),
@@ -52,9 +52,9 @@ class Slurm():
             raise AuthenticationException('Not logged in to server')
         if args is None:
             args = []
-        args = ' '.join(args + [line.replace('#SBATCH', '').strip() for line in lines if line.startswith('#SBATCH')])
-        lines = [line.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for line in lines if not line.startswith('#SBATCH')]
-        shebangs = [i for i, line in enumerate(lines) if line.startswith('#!')]
+        args = ' '.join(args + [x.replace('#SBATCH', '').strip() for x in lines if x.startswith('#SBATCH')])
+        lines = [x.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for x in lines if not x.startswith('#SBATCH')]
+        shebangs = [i for i, x in enumerate(lines) if x.startswith('#!')]
         command = lines[:shebangs[0]] if shebangs else lines
         command_init = []
         for i, j in zip(shebangs, shebangs[1:] + [None]):
@@ -164,8 +164,8 @@ class SSHClient(paramiko.SSHClient):
         if not isinstance(command, str):
             command = '\n'.join(command)
         _, stdout, stderr = super(SSHClient, self).exec_command(command, *args, **kwargs)
-        stdouts = [line.strip('\n') for line in stdout]
-        stderrs = [line.strip('\n') for line in stderr]
+        stdouts = [x.strip('\n') for x in stdout]
+        stderrs = [x.strip('\n') for x in stderr]
         if verbose:
             if stdouts:
                 print('\n'.join(stdouts), file=sys.stdout, flush=True)
