@@ -71,7 +71,10 @@ class Slurm():
             raise IOError('\n'.join(stderrs))
         for stdout in stdouts:
             args = re.sub('\\{(.+?)\\}', stdout, args, count=1)
-        command = ['sbatch {} --wrap="{}"'.format(args, '\n'.join(command))]
+        if lines:
+            command = ['sbatch {} --wrap="{}"'.format(args, '\n'.join(command))]
+        else:
+            command = ['sbatch {}'.format(args)]
         stdouts, _ = self._ssh.exec_command(command_init + command)
         if not stdouts or not stdouts[-1].startswith('Submitted batch job '):
             raise IOError('\n'.join(stdouts))
