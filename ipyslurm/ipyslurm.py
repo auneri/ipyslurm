@@ -287,7 +287,7 @@ class IPySlurm(magic.Magics):
                     else:
                         ftp.remove(remote)
                         pbar.close(clear=True)
-                else:
+                else:  # 'chmod', 'chown', 'ln', 'ls', 'mkdir', 'pwd', 'rename', 'rmdir', 'symlink'
                     output = getattr(ftp, command)(*argv[1:])
                 if argv[0] in ('pwd', 'lpwd'):
                     print(output)
