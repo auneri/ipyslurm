@@ -199,9 +199,10 @@ class IPySlurm(magic.Magics):
                                 pbar.update()
                             if not recurse:
                                 break
-                        pbar.close()
+                        pbar.close(clear=len(pbar) == 0)
                     else:
                         get(ftp, remote, local, resume)
+                        pbar.close(clear=True)
                 elif argv[0] == 'put':
                     recurse, resume = False, False
                     for arg in list(argv):
@@ -227,9 +228,10 @@ class IPySlurm(magic.Magics):
                                 pbar.update()
                             if not recurse:
                                 break
-                        pbar.close()
+                        pbar.close(clear=len(pbar) == 0)
                     else:
                         put(ftp, local, remote, resume)
+                        pbar.close(clear=True)
                 elif argv[0] == 'lcd':
                     if len(argv) != 2:
                         raise ValueError('lcd local_directory')

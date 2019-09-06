@@ -15,6 +15,9 @@ class ProgressBar():
         if not hide:
             display(self.widget)
 
+    def __len__(self):
+        return self._progress.max
+
     def close(self, clear=False):
         self._progress.max = self._progress.value
         if clear:
