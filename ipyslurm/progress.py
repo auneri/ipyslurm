@@ -25,11 +25,11 @@ class ProgressBar():
         else:
             self._progress.bar_style = 'success'
 
-    def reset(self, n=None):
+    def reset(self, n=None, style='info'):
         self._progress.value = 0
         if n is not None:
             self._progress.max = n
-        self._progress.bar_style = 'info'
+        self._progress.bar_style = style
         self._times = [time.time()]
 
     def update(self, value=1):

@@ -58,17 +58,26 @@ def put(ftp, local, remote, resume=False):
         ftp.utime(remote, (stats.st_atime, stats.st_mtime))
 
 
-def walk(ftp, remote):
+def walk(ftp, top, topdown=True, followlinks=False):
     dirnames, filenames = [], []
-    for f in ftp.listdir_attr(remote):
-        if stat.S_ISDIR(f.st_mode):
-            dirnames.append(f.filename)
+    try:
+        attrs = ftp.listdir_attr(top)
+    except FileNotFoundError:
+        raise FileNotFoundError('Failed to list contents of "{}"'.format(top))
+    for attr in attrs:
+        if stat.S_ISDIR(attr.st_mode):
+            dirnames.append(attr)
         else:
-            filenames.append(f.filename)
-    yield remote, dirnames, filenames
-    for dirname in dirnames:
-        for x in walk(ftp, '{}/{}'.format(remote, dirname)):
-            yield x
+            filenames.append(attr)
+    if topdown:
+        yield top, [x.filename for x in dirnames], [x.filename for x in filenames]
+    for attr in dirnames:
+        dirpath = '{}/{}'.format(top, attr.filename)
+        if followlinks or not stat.S_ISLNK(attr.st_mode):
+            for x in walk(ftp, dirpath, topdown, followlinks):
+                yield x
+    if not topdown:
+        yield top, [x.filename for x in dirnames], [x.filename for x in filenames]
 
 
 @magic.magics_class
@@ -164,7 +173,7 @@ class IPySlurm(magic.Magics):
         args = magic_arguments.parse_argstring(self.sftp, line)
         lines = [line for line in cell.splitlines() if line.strip() and not line.lstrip().startswith('#')]
         with self._slurm.ftp() as (ssh, ftp):
-            pbars = [ProgressBar(hide=args.quiet or not any(x.startswith(y) for y in ('get', 'put'))) for x in lines]
+            pbars = [ProgressBar(hide=args.quiet or not any(x.startswith(y) for y in ('get', 'put', 'rm'))) for x in lines]
             for line, pbar in zip(lines, pbars):
                 argv = line.split()
                 command = commands.get(argv[0])
@@ -238,6 +247,25 @@ class IPySlurm(magic.Magics):
                     output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(normalize(argv[1]))
                 elif argv[0] in ('lls', 'lmkdir', 'lpwd'):
                     output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
+                elif argv[0] == 'rm':
+                    recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
+                    argv = [x for x in argv if not x.startswith('-')]
+                    if len(argv) != 2:
+                        raise ValueError('rm [-r] remote_file')
+                    remote = normalize(argv[1], ssh, ftp)
+                    if recurse and stat.S_ISDIR(ftp.stat(remote).st_mode):
+                        pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote, topdown=False))), style='danger')
+                        for dirpath, dirnames, filenames in walk(ftp, remote, topdown=False):
+                            for filename in filenames:
+                                ftp.remove('{}/{}'.format(dirpath, filename))
+                                pbar.update()
+                            for dirname in dirnames:
+                                ftp.rmdir('{}/{}'.format(dirpath, dirname))
+                        ftp.rmdir(remote)
+                        pbar.close(clear=len(pbar) == 0)
+                    else:
+                        ftp.remove(remote)
+                        pbar.close(clear=True)
                 else:
                     output = getattr(ftp, command)(*argv[1:])
                 if argv[0] in ('pwd', 'lpwd'):
