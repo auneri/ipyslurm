@@ -162,6 +162,8 @@ class IPySlurm(magic.Magics):
             'lmkdir': 'os.mkdir',
             'ln': 'symlink',
             'lpwd': 'os.getcwd',
+            'lrm': 'os.remove',
+            'lrmdir': 'os.rmdir',
             'ls': 'listdir',
             'mkdir': 'mkdir',
             'put': 'put',
@@ -245,8 +247,27 @@ class IPySlurm(magic.Magics):
                     if len(argv) != 2:
                         raise ValueError('lcd local_directory')
                     output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(normalize(argv[1]))
-                elif argv[0] in ('lls', 'lmkdir', 'lpwd'):
+                elif argv[0] in ('lls', 'lmkdir', 'lpwd', 'lrmdir'):
                     output = getattr(importlib.import_module(command.rsplit('.', 1)[0]), command.rsplit('.', 1)[1])(*argv[1:])
+                elif argv[0] == 'lrm':
+                    recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
+                    argv = [x for x in argv if not x.startswith('-')]
+                    if len(argv) != 2:
+                        raise ValueError('lrm [-r] local_file')
+                    local = normalize(argv[1])
+                    if recurse and os.path.isdir(local):
+                        pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local, topdown=False))), style='danger')
+                        for dirpath, dirnames, filenames in os.walk(local, topdown=False):
+                            for filename in filenames:
+                                os.remove(os.path.join(dirpath, filename))
+                                pbar.update()
+                            for dirname in dirnames:
+                                os.rmdir(os.path.join(dirpath, dirname))
+                        os.rmdir(local)
+                        pbar.close(clear=len(pbar) == 0)
+                    else:
+                        os.remove(local)
+                        pbar.close(clear=True)
                 elif argv[0] == 'rm':
                     recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
                     argv = [x for x in argv if not x.startswith('-')]
