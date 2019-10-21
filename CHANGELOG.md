@@ -4,7 +4,14 @@ This project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html
 and the format of this document is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
-See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.3.0...master) for detailed changes.
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.4.0...master) for detailed changes.
+
+## 1.4.0 -- 2019-10-21
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.3.0...v1.4.0) for detailed changes.
+* New `sftp` remote commands `rm` and `rmdir` ([73f680d](https://github.com/auneri/ipyslurm/commit/73f680d05b16279b11b05be5dcc6693ba49530c9))
+* New `sftp` local commands `lrm` and `lrmdir` ([8e4256a](https://github.com/auneri/ipyslurm/commit/8e4256abd687c45ba98a9afccbe0920c09f6a14c))
+* New `sbatch` line magic ([cac3fed](https://github.com/auneri/ipyslurm/commit/cac3fed2f23da34bff10d10aa883b00d34fc7f67))
+* Minimum required `paramiko` is v2.5 ([f26612e](https://github.com/auneri/ipyslurm/commit/f26612e11371a73fe4dda1022b6d4f946da00797))
 
 ## 1.3.0 -- 2019-06-03
 See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.2.0...v1.3.0) for detailed changes.
