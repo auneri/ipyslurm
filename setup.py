@@ -29,6 +29,7 @@ setuptools.setup(
     author='Ali Uneri',
     license='MIT',
     classifiers=[
+        'Framework :: IPython',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3'],
     packages=setuptools.find_packages(),
