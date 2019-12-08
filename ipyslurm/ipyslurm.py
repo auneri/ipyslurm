@@ -287,10 +287,6 @@ class IPySlurm(magic.Magics):
                 elif argv[0] in ('ls', 'lls'):
                     print('\n'.join(output))
 
-    @magic.line_magic
-    def sinteract(self, line):
-        self._slurm.interact()
-
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('server', help='Address of server')
     @magic_arguments.argument('--username', help='Username, interactively requested if not provided')
@@ -307,6 +303,10 @@ class IPySlurm(magic.Magics):
     def slogout(self, line):
         """Logout of server."""
         self._slurm.logout()
+
+    @magic.line_magic
+    def sshell(self, line):
+        self._slurm.shell()
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('filepath', help='Path of file')

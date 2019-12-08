@@ -94,9 +94,6 @@ class Slurm():
         finally:
             ftp.close()
 
-    def interact(self):
-        self._ssh.invoke_shell()
-
     def login(self, server, username=None, password=None, server_data=None):
         if username is None:
             username = getpass.getuser()
@@ -128,6 +125,9 @@ class Slurm():
         if self._ssh_data is not None:
             print('Logging out of {}'.format(self._ssh_data.get_server()))
             self._ssh_data = None
+
+    def shell(self):
+        self._ssh.invoke_shell()
 
 
 class SSHClient(paramiko.SSHClient):
