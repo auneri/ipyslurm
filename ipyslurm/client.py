@@ -1,11 +1,14 @@
 import datetime
 import getpass
-import platform
 import re
 import sys
+import threading
+import time
 from contextlib import contextmanager
 
+import ipywidgets
 import paramiko
+from IPython.display import display
 from paramiko import AuthenticationException, BadAuthenticationType, SSHException
 
 
@@ -181,54 +184,29 @@ class SSHClient(paramiko.SSHClient):
 
     def invoke_shell(self, *args, **kwargs):
         channel = super(SSHClient, self).invoke_shell(*args, **kwargs)
-        if platform.system() == 'Windows':
-            import threading
+        output = ipywidgets.Output()
+        stdin = ipywidgets.widgets.Text(placeholder='Enter bash command')
+        display(ipywidgets.VBox((output, stdin)))
 
-            def writeall(channel_):
-                while True:
-                    stdout = paramiko.py3compat.u(channel_.recv(256))
-                    if not stdout:
-                        sys.stdout.flush()
-                        break
-                    sys.stdout.write(stdout)
-                    sys.stdout.flush()
-            writer = threading.Thread(target=writeall, args=(channel,))
-            writer.start()
-
+        def writeall(channel_, output_):
             while True:
-                stdin = input()
-                if stdin in ('exit', 'quit', 'q'):
-                    break
-                channel.send('{}\n'.format(stdin))
-        else:
-            import select
-            import socket
-            import termios
-            import tty
+                stdout = paramiko.py3compat.u(channel_.recv(1024))
+                if stdout:
+                    output_.append_stdout(stdout)
+        writer = threading.Thread(target=writeall, args=(channel, output))
+        writer.start()
 
-            tty_prev = termios.tcgetattr(sys.stdin)
-            try:
-                tty.setraw(sys.stdin.fileno())
-                tty.setcbreak(sys.stdin.fileno())
-                channel.setblocking(False)
-
-                while True:
-                    r, w, e = select.select([channel, sys.stdin], [], [])
-                    if channel in r:
-                        try:
-                            stdout = paramiko.py3compat.u(channel.recv(1024))
-                            if not stdout:
-                                sys.stdout.flush()
-                                break
-                            sys.stdout.write(stdout)
-                            sys.stdout.flush()
-                        except socket.timeout:
-                            pass
-                    if sys.stdin in r:
-                        stdin = input()
-                        if stdin in ('exit', 'quit', 'q'):
-                            break
-                        channel.send('{}\n'.format(stdin))
-            finally:
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, tty_prev)
-        channel.close()
+        def callback(widget):
+            if widget.value in ('exit', 'quit', 'q'):
+                writer.join(0)
+                channel.close()
+                stdin.disabled = True
+            else:
+                channel.send('{}\n'.format(widget.value))
+            if widget.value == 'clear':
+                lastline = output.outputs[-1]['text'].splitlines()[-1]
+                time.sleep(0.1)
+                output.outputs = ()
+                output.append_stdout(lastline)
+            widget.value = ''
+        stdin.on_submit(callback)
