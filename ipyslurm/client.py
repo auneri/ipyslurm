@@ -160,10 +160,13 @@ class SSHClient(paramiko.SSHClient):
         self._server = server
 
     def exec_command(self, command, *args, **kwargs):
+        block = kwargs.pop('block', True)
         verbose = kwargs.pop('verbose', True)
         if not isinstance(command, str):
             command = '\n'.join(command)
         _, stdout, stderr = super(SSHClient, self).exec_command(command, *args, **kwargs)
+        if block:
+            stdout.channel.recv_exit_status()
         stdouts = [x.strip('\n') for x in stdout]
         stderrs = [x.strip('\n') for x in stderr]
         if verbose:
