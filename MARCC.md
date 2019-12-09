@@ -8,14 +8,15 @@ Perform `ftp` operations over a dedicated data server:
 %slogin gateway2.marcc.jhu.edu --username my_username --data-server dtn2.marcc.jhu.edu
 ```
 
-Modify `.bashrc` for faster cell execution:
+Customize default modules:
 
 ```shell
-%%swritefile ~/.bashrc
-# skip sourcing z01_sbalance.sh
-for script in /etc/profile.d/*[^z01_status]*.sh; do . $script; done
-# load modules in a single statement
-module load cuda/9.2 python/3.6-anaconda
+%%sbash
+rm -f ~/.lmod.d/default
+module reset
+module unload MARCC
+module load centos7/current cuda/9.0
+module save
 ```
 
 Display balance and disk usage:
@@ -23,7 +24,8 @@ Display balance and disk usage:
 ```shell
 %%sbash
 sbalance
-du --human-readable --max-depth 2 --separate-dirs my_folder | sort --human-numeric-sort --reverse
+scratchquota
+du --human-readable --max-depth 1 $HOME | sort --human-numeric-sort --reverse
 ```
 
 Reuse `sbatch` arguments:
