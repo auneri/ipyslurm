@@ -4,7 +4,13 @@ This project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html
 and the format of this document is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
-See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.4.0...master) for detailed changes.
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.5.0...master) for detailed changes.
+
+## 1.5.0 -- 2019-12-10
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.4.0...v1.5.0) for detailed changes.
+* New `sshell` line magic, supersedes `sinteract` ([c5fa56f](https://github.com/auneri/ipyslurm/commit/c5fa56fd6e01c24f9ebff78030a9162c1429572c))
+* Block bash commands to avoid flooding server on period calls ([cd5034e](https://github.com/auneri/ipyslurm/commit/cd5034efa4e0eb44de80029ca73bc9b31ec9d314))
+* Project is properly marked as an IPython extension ([f42c812](https://github.com/auneri/ipyslurm/commit/f42c8124a8b7360f9f3f0b7bbc08883a32a9ef08))
 
 ## 1.4.0 -- 2019-10-21
 See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.3.0...v1.4.0) for detailed changes.
