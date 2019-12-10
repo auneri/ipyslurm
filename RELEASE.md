@@ -1,9 +1,9 @@
 # ipyslurm Release Instructions
 
 1. Create a new tag
-    * update `__version__` and `CHANGELOG` with commit with message "Release vX.X.X"
+    * update `__version__` and `CHANGELOG` with commit message "Release vX.X.X"
+    * add tag with message "Release vX.X.X"
     * push changes to https://github.com/auneri/ipyslurm
-    * add tag with message "Release vX.X.X" and push
 
 2. Upload new package to PyPI
 
