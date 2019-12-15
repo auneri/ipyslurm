@@ -200,7 +200,7 @@ class SSHClient(paramiko.SSHClient):
             if widget.value in ('exit', 'quit', 'q'):
                 writer.join(0)
                 channel.close()
-                stdin.disabled = True
+                stdin.close()
             else:
                 channel.send('{}\n'.format(widget.value))
             if widget.value == 'clear':
