@@ -4,7 +4,13 @@ This project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html
 and the format of this document is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
-See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.5.0...master) for detailed changes.
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.6.0...master) for detailed changes.
+
+## 1.6.0 -- 2020-12-18
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.5.0...v1.6.0) for detailed changes.
+* Support `ls`, `mkdir`, and `rmdir` in `sftp` cell magic ([5896e26](https://github.com/auneri/ipyslurm/commit/5896e2620fb6c818a5aec880063cb054a3da0560))
+* Various fixed, including escaping paths with spaces ([cea8407](https://github.com/auneri/ipyslurm/commit/cea84070b4fff91ff89df4469f3fdf1a2e17c128))
+* Continuous integration using GitHub Actions ([08ec92a](https://github.com/auneri/ipyslurm/commit/08ec92aa802ac547b00e4f13ebc6a58fa00c7add))
 
 ## 1.5.0 -- 2019-12-10
 See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.4.0...v1.5.0) for detailed changes.
