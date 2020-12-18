@@ -2,6 +2,7 @@ import datetime
 import importlib
 import os
 import re
+import shlex
 import stat
 import sys
 import time
@@ -39,7 +40,7 @@ def normalize(path, ssh=None, ftp=None):
         cwd = ftp.getcwd()
         if cwd is not None:
             path = '{}/{}'.format(cwd, path)
-        stdouts, _ = ssh.exec_command('readlink -f {}'.format(path), verbose=False)
+        stdouts, _ = ssh.exec_command('readlink -f "{}"'.format(path), verbose=False)
         if len(stdouts) != 1:
             raise OSError('Failed to find {}'.format(path))
         return stdouts[0]
@@ -182,7 +183,7 @@ class IPySlurm(magic.Magics):
         with self._slurm.ftp() as (ssh, ftp):
             pbars = [ProgressBar(hide=args.quiet or not any(x.startswith(y) for y in ('get', 'put', 'rm'))) for x in lines]
             for line, pbar in zip(lines, pbars):
-                argv = line.split()
+                argv = shlex.split(line, posix=False)
                 command = commands.get(argv[0])
                 if command is None:
                     raise SyntaxError('"{}" is not supported'.format(argv[0]))
