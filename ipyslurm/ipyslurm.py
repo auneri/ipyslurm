@@ -1,6 +1,7 @@
 import datetime
 import importlib
 import os
+import re
 import stat
 import sys
 import time
@@ -56,6 +57,11 @@ def put(ftp, local, remote, resume=False):
         ftp.put(local, remote)
         stats = os.stat(local)
         ftp.utime(remote, (stats.st_atime, stats.st_mtime))
+
+
+def sort_key_natural(s, _nsre=re.compile('([0-9]+)')):
+    """Adapted from http://blog.codinghorror.com/sorting-for-humans-natural-sort-order."""
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(_nsre, str(s))]
 
 
 def walk(ftp, top, topdown=True, followlinks=False):
@@ -285,7 +291,7 @@ class IPySlurm(magic.Magics):
                 if argv[0] in ('pwd', 'lpwd'):
                     print(output)
                 elif argv[0] in ('ls', 'lls'):
-                    print('\n'.join(output))
+                    print('\n'.join(sorted(output, key=sort_key_natural)))
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('server', help='Address of server')
