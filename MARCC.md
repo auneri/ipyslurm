@@ -5,7 +5,7 @@
 Perform `ftp` operations over a dedicated data server:
 
 ```shell
-%slogin gateway2.marcc.jhu.edu --username my_username --data-server dtn2.marcc.jhu.edu
+%slogin login.marcc.jhu.edu --username my_username
 ```
 
 Customize default modules:
@@ -15,7 +15,7 @@ Customize default modules:
 rm -f ~/.lmod.d/default
 module reset
 module unload MARCC
-module load centos7/current cuda/9.0
+module load centos7/current cuda/10.1
 module save
 ```
 
@@ -33,11 +33,11 @@ Reuse `sbatch` arguments:
 ```python
 def gpuk80(ngpu=1, **kwargs):
     kwargs.setdefault('cpus-per-task', 6)
-    kwargs.setdefault('gres', 'gpu:{}'.format(ngpu))
+    kwargs.setdefault('gres', f'gpu:{ngpu}')
     kwargs.setdefault('nodes', 1)
     kwargs.setdefault('ntasks-per-node', ngpu)
     kwargs.setdefault('partition', 'gpuk80')
-    return ' '.join('--{} {}'.format(x, y) for x, y in kwargs.items())
+    return ' '.join(f'--{key} {value}' for key, value in kwargs.items())
 ```
 
 ```shell
