@@ -268,6 +268,14 @@ class IPySlurm(magic.Magics):
                     else:
                         os.remove(local)
                         pbar.close(clear=True)
+                elif argv[0] == 'ls':
+                    if len(argv) != 2:
+                        raise ValueError('ls remote_directory')
+                    output = getattr(ftp, command)(normalize(argv[1], ssh, ftp))
+                elif argv[0] == 'mkdir':
+                    if len(argv) != 2:
+                        raise ValueError('mkdir remote_directory')
+                    output = getattr(ftp, command)(normalize(argv[1], ssh, ftp))
                 elif argv[0] == 'rm':
                     recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
                     argv = [x for x in argv if not x.startswith('-')]
@@ -287,7 +295,11 @@ class IPySlurm(magic.Magics):
                     else:
                         ftp.remove(remote)
                         pbar.close(clear=True)
-                else:  # 'chmod', 'chown', 'ln', 'ls', 'mkdir', 'pwd', 'rename', 'rmdir', 'symlink'
+                elif argv[0] == 'rmdir':
+                    if len(argv) != 2:
+                        raise ValueError('rmdir remote_directory')
+                    output = getattr(ftp, command)(normalize(argv[1], ssh, ftp))
+                else:  # 'chmod', 'chown', 'ln', 'pwd', 'rename', 'symlink'
                     output = getattr(ftp, command)(*argv[1:])
                 if argv[0] in ('pwd', 'lpwd'):
                     print(output)
