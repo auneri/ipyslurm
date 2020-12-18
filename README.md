@@ -5,6 +5,7 @@
 [![pypi](https://img.shields.io/pypi/v/ipyslurm.svg)](https://pypi.org/project/ipyslurm)
 [![conda-forge](https://img.shields.io/conda/vn/conda-forge/ipyslurm.svg)](https://anaconda.org/conda-forge/ipyslurm)
 [![license](https://img.shields.io/github/license/auneri/ipyslurm.svg)](https://github.com/auneri/ipyslurm/blob/master/LICENSE.md)
+[![build](https://img.shields.io/github/workflow/status/auneri/ipyslurm/ipyslurm)](https://github.com/auneri/ipyslurm/actions)
 
 ## Getting started
 

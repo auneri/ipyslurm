@@ -1,0 +1,23 @@
+name: ipyslurm
+
+on: push
+
+jobs:
+
+  build:
+    name: build (${{ matrix.os }}, python-${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: [3.6, 3.7, 3.8]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+      - run: conda env update --name test
+      - run: conda run --name test --no-capture-output pytest

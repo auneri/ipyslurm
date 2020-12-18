@@ -1,0 +1,22 @@
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - ipython>=7
+  - ipywidgets>=7
+  - notebook>=5
+  - paramiko>=2.5
+  - python>=3.6
+  # test requirements
+  - flake8>=3.8
+  - flake8-builtins
+  - flake8-comprehensions
+  - flake8-import-order
+  - flake8-mutable
+  - flake8-polyfill
+  - pytest>=6.1
+  - pytest-flake8
+  # pip requirements
+  - pip>=20.3
+  - pip:
+    - --editable .
