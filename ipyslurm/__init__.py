@@ -1,6 +1,5 @@
-from .ipyslurm import IPySlurm
-
-__version__ = '1.5.0'
+from .version import __version__  # noqa: F401
+from .ipyslurm import IPySlurm  # noqa: I100
 
 
 def load_ipython_extension(ipython):
