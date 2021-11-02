@@ -18,6 +18,7 @@ setuptools.setup(
     url='https://auneri.github.io/ipyslurm',
     author='Ali Uneri',
     license='MIT',
+    license_files=('LICENSE.md',),
     classifiers=[
         'Framework :: IPython',
         'License :: OSI Approved :: MIT License',
