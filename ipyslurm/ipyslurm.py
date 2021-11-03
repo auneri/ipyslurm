@@ -106,7 +106,7 @@ class IPySlurm(magic.Magics):
         args = magic_arguments.parse_argstring(self.sbash, line)
         start = timeit.default_timer()
         try:
-            for stdouts, stderrs in self._slurm.bash(cell.splitlines(), verbose=args.stdout is None and args.stderr is None):
+            for stdouts, stderrs in self._slurm.script(cell.splitlines(), verbose=args.stdout is None and args.stderr is None):
                 elapsed = timeit.default_timer() - start
                 if args.timeout is not None and elapsed > args.timeout:
                     print('\nsbash terminated after {:.1f} seconds'.format(elapsed))
@@ -131,7 +131,7 @@ class IPySlurm(magic.Magics):
     def sbatch(self, line, cell=''):
         """Submit a batch script to Slurm."""
         args = magic_arguments.parse_argstring(self.sbatch, line)
-        job = self._slurm.batch(cell.splitlines(), args.args)
+        job = self._slurm.sbatch(cell.splitlines(), args.args)
         if args.wait or args.tail is not None:
             keys = 'JobName', 'JobId', 'JobState', 'Reason', 'SubmitTime', 'StartTime', 'RunTime'
             try:
@@ -180,7 +180,7 @@ class IPySlurm(magic.Magics):
             'symlink': 'symlink'}
         args = magic_arguments.parse_argstring(self.sftp, line)
         lines = [x for x in cell.splitlines() if x.strip() and not x.lstrip().startswith('#')]
-        with self._slurm.ftp() as (ssh, ftp):
+        with self._slurm.sftp() as (ssh, ftp):
             pbars = [ProgressBar(hide=args.quiet or not any(x.startswith(y) for y in ('get', 'put', 'rm'))) for x in lines]
             for line, pbar in zip(lines, pbars):
                 argv = shlex.split(line, posix=False)
@@ -334,5 +334,5 @@ class IPySlurm(magic.Magics):
     def swritefile(self, line, cell):
         args = magic_arguments.parse_argstring(self.swritefile, line)
         lines = ['cat << \\EOF {} {}'.format('>>' if args.append else '>', args.filepath)] + cell.splitlines() + ['EOF']
-        for _ in self._slurm.bash(lines, verbose=True):
+        for _ in self._slurm.script(lines, verbose=True):
             break
