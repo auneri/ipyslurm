@@ -4,7 +4,7 @@ import ipywidgets
 from IPython.display import display
 
 
-class ProgressBar():
+class ProgressBar:
 
     def __init__(self, n=0, hide=False):
         self._times = []

@@ -11,8 +11,8 @@ import timeit
 from IPython.core import magic, magic_arguments
 from IPython.display import clear_output
 
-from .client import Slurm
 from .progress import ProgressBar
+from .slurm import Slurm
 
 
 def get(ftp, remote, local, resume=False):
