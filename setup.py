@@ -26,8 +26,7 @@ setuptools.setup(
         'Programming Language :: Python :: 3'],
     packages=setuptools.find_packages(),
     install_requires=[
-        'ipython>=7',
-        'ipywidgets>=7',
-        'notebook>=5',
-        'paramiko>=2.5'],
-    python_requires='>=3.6')
+        'ipython',
+        'ipywidgets',
+        'paramiko'],
+    python_requires='>=3.7')
