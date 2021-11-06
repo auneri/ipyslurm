@@ -22,9 +22,12 @@ class SSH(paramiko.SSHClient):
     def __del__(self):
         self.close()
 
+    def close(self):
+        super().close()
+        self.server = None
+
     def connect(self, server, username, password=None, *args, **kwargs):
         self.close()
-        self.server = None
         super().connect(server, username=username, password=password, *args, **kwargs)
         self.server = server
 
