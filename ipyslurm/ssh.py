@@ -9,7 +9,7 @@ from IPython.display import display
 from paramiko import AuthenticationException, BadAuthenticationType, SSHException
 
 
-class SSHClient(paramiko.SSHClient):
+class SSH(paramiko.SSHClient):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -6,7 +6,7 @@ from contextlib import contextmanager
 
 from paramiko import AuthenticationException
 
-from .ssh import SSHClient
+from . import sftp, ssh
 
 
 class Slurm:
@@ -26,7 +26,7 @@ class Slurm:
             username = getpass.getuser()
         try:
             print(f'Logging in to {username}@{server}')
-            self._ssh = SSHClient()
+            self._ssh = ssh.SSH()
             self._ssh.connect(server, username, password)
             self._ssh.get_transport().set_keepalive(30)
         except:  # noqa: E722
@@ -97,16 +97,11 @@ class Slurm:
             if command_del:
                 self._ssh.exec_command(command_del, verbose=False)
 
-    @contextmanager
-    def sftp(self):
+    def sftp(self, lines, quiet=False):
         if self._ssh is None:
             raise AuthenticationException('Not logged in to server')
-        ssh = self._ssh
-        ftp = ssh.open_sftp()
-        try:
-            yield ssh, ftp
-        finally:
-            ftp.close()
+        ftp = sftp.SFTP(self._ssh)
+        ftp.exec_commands(lines, quiet)
 
     def shell(self):
         self._ssh.invoke_shell()
