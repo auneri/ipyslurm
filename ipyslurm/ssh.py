@@ -26,9 +26,10 @@ class SSH(paramiko.SSHClient):
         super().close()
         self.server = None
 
-    def connect(self, server, username, password=None, *args, **kwargs):
+    def connect(self, server, username, password=None, keepalive=30, **kwargs):
         self.close()
-        super().connect(server, username=username, password=password, *args, **kwargs)
+        super().connect(server, username=username, password=password, **kwargs)
+        self.get_transport().set_keepalive(keepalive)
         self.server = server
 
     def exec_command(self, command, *args, **kwargs):

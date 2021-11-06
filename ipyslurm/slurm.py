@@ -23,12 +23,11 @@ class Slurm:
         servers = [x.server for x in (self.ssh,) if x is not None]
         return 'Logged in to {}'.format(' and '.join(servers)) if servers else 'Not logged in to server'
 
-    def login(self, server, username=None, password=None):
+    def login(self, server, username=None, password=None, **kwargs):
         if username is None:
             username = getpass.getuser()
         print(f'Logging in to {username}@{server}')
-        self.ssh = ssh.SSH(server, username, password)
-        self.ssh.get_transport().set_keepalive(30)
+        self.ssh = ssh.SSH(server, username, password, **kwargs)
         return self
 
     def logout(self):
