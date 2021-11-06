@@ -39,10 +39,10 @@ def normalize(path, ssh=None, ftp=None):
     else:
         cwd = ftp.getcwd()
         if cwd is not None:
-            path = '{}/{}'.format(cwd, path)
-        stdouts, _ = ssh.exec_command('readlink -f "{}"'.format(path), verbose=False)
+            path = f'{cwd}/{path}'
+        stdouts, _ = ssh.exec_command(f'readlink -f "{path}"', verbose=False)
         if len(stdouts) != 1:
-            raise OSError('Failed to find {}'.format(path))
+            raise OSError(f'Failed to find {path}')
         return stdouts[0]
 
 
@@ -70,7 +70,7 @@ def walk(ftp, top, topdown=True, followlinks=False):
     try:
         attrs = ftp.listdir_attr(top)
     except FileNotFoundError:
-        raise FileNotFoundError('Failed to list contents of "{}"'.format(top))
+        raise FileNotFoundError(f'Failed to list contents of "{top}"')
     for attr in attrs:
         if stat.S_ISDIR(attr.st_mode):
             dirnames.append(attr)
@@ -79,7 +79,7 @@ def walk(ftp, top, topdown=True, followlinks=False):
     if topdown:
         yield top, [x.filename for x in dirnames], [x.filename for x in filenames]
     for attr in dirnames:
-        dirpath = '{}/{}'.format(top, attr.filename)
+        dirpath = f'{top}/{attr.filename}'
         if followlinks or not stat.S_ISLNK(attr.st_mode):
             for x in walk(ftp, dirpath, topdown, followlinks):
                 yield x
@@ -109,7 +109,7 @@ class IPySlurm(magic.Magics):
             for stdouts, stderrs in self._slurm.script(cell.splitlines(), verbose=args.stdout is None and args.stderr is None):
                 elapsed = timeit.default_timer() - start
                 if args.timeout is not None and elapsed > args.timeout:
-                    print('\nsbash terminated after {:.1f} seconds'.format(elapsed))
+                    print(f'\nsbash terminated after {elapsed:.1f} seconds')
                 elif args.period is not None:
                     time.sleep(args.period)
                     clear_output(wait=True)
@@ -136,18 +136,18 @@ class IPySlurm(magic.Magics):
             keys = 'JobName', 'JobId', 'JobState', 'Reason', 'SubmitTime', 'StartTime', 'RunTime'
             try:
                 while True:
-                    stdouts, _ = self._slurm._ssh.exec_command('scontrol show jobid {}'.format(job), verbose=False)
+                    stdouts, _ = self._slurm._ssh.exec_command(f'scontrol show jobid {job}', verbose=False)
                     details = dict(x.split('=', 1) for x in '\n'.join(stdouts).split())
                     clear_output(wait=True)
                     if args.tail is not None and details['JobState'] in ('RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED'):
-                        self._slurm._ssh.exec_command('tail --lines={} {}'.format(args.tail, details['StdOut']))
+                        self._slurm._ssh.exec_command(f'tail --lines={args.tail} {details["StdOut"]}')
                     else:
                         print('\n'.join('{1:>{0}}: {2}'.format(len(max(keys, key=len)), x, details[x]) for x in keys))
                     if details['JobState'] not in ('PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING'):
                         break
             except KeyboardInterrupt:
-                self._slurm._ssh.exec_command('scancel {}'.format(job))
-                print('Canceling job {}'.format(job), file=sys.stderr)
+                self._slurm._ssh.exec_command(f'scancel {job}')
+                print(f'Canceling job {job}', file=sys.stderr)
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('--quiet', action='store_true', help='Disable progress bar')
@@ -186,7 +186,7 @@ class IPySlurm(magic.Magics):
                 argv = shlex.split(line, posix=False)
                 command = commands.get(argv[0])
                 if command is None:
-                    raise SyntaxError('"{}" is not supported'.format(argv[0]))
+                    raise SyntaxError(f'"{argv[0]}" is not supported')
                 if argv[0] == 'cd':
                     if len(argv) != 2:
                         raise ValueError('cd remote_directory')
@@ -209,7 +209,7 @@ class IPySlurm(magic.Magics):
                             except OSError:
                                 pass
                             for filename in filenames:
-                                get(ftp, '{}/{}'.format(dirpath, filename), os.path.join(root, filename), resume)
+                                get(ftp, f'{dirpath}/{filename}', os.path.join(root, filename), resume)
                                 pbar.update()
                             if not recurse:
                                 break
@@ -235,7 +235,7 @@ class IPySlurm(magic.Magics):
                             except OSError:
                                 pass
                             for filename in filenames:
-                                put(ftp, os.path.join(dirpath, filename), '{}/{}'.format(root, filename), resume)
+                                put(ftp, os.path.join(dirpath, filename), f'{root}/{filename}', resume)
                                 pbar.update()
                             if not recurse:
                                 break
@@ -286,10 +286,10 @@ class IPySlurm(magic.Magics):
                         pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(walk(ftp, remote, topdown=False))), style='danger')
                         for dirpath, dirnames, filenames in walk(ftp, remote, topdown=False):
                             for filename in filenames:
-                                ftp.remove('{}/{}'.format(dirpath, filename))
+                                ftp.remove(f'{dirpath}/{filename}')
                                 pbar.update()
                             for dirname in dirnames:
-                                ftp.rmdir('{}/{}'.format(dirpath, dirname))
+                                ftp.rmdir(f'{dirpath}/{dirname}')
                         ftp.rmdir(remote)
                         pbar.close(clear=len(pbar) == 0)
                     else:

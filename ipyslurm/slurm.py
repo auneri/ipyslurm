@@ -26,7 +26,7 @@ class Slurm:
         if username is None:
             username = getpass.getuser()
         try:
-            print('Logging in to {}@{}'.format(username, server))
+            print(f'Logging in to {username}@{server}')
             self._ssh = SSHClient()
             self._ssh.connect(server, username, password)
             self._ssh.get_transport().set_keepalive(30)
@@ -36,8 +36,8 @@ class Slurm:
         if server_data is not None:
             try:
                 sys.stdout.flush()
-                print('Please wait for a new verification code before logging in to {}'.format(server_data), file=sys.stderr, flush=True)
-                print('Logging in to {}@{}'.format(username, server_data))
+                print(f'Please wait for a new verification code before logging in to {server_data}', file=sys.stderr, flush=True)
+                print(f'Logging in to {username}@{server_data}')
                 self._ssh_data = SSHClient()
                 self._ssh_data.connect(server_data, username, password)
                 self._ssh_data.get_transport().set_keepalive(30)
@@ -48,10 +48,10 @@ class Slurm:
 
     def logout(self):
         if self._ssh is not None:
-            print('Logging out of {}'.format(self._ssh.get_server()))
+            print(f'Logging out of {self._ssh.get_server()}')
             self._ssh = None
         if self._ssh_data is not None:
-            print('Logging out of {}'.format(self._ssh_data.get_server()))
+            print(f'Logging out of {self._ssh_data.get_server()}')
             self._ssh_data = None
 
     def sbatch(self, lines, args=None):
@@ -65,13 +65,13 @@ class Slurm:
         command = lines[:shebangs[0]] if shebangs else lines
         command_init = []
         for i, j in zip(shebangs, shebangs[1:] + [None]):
-            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_{}'.format(i))
+            timestamp = datetime.datetime.now().strftime(f'%Y%m%d_%H%M%S_{i}')
             script = '\n'.join(lines[slice(i, j)])
             command_init += [
                 'mkdir -p ~/.ipyslurm',
-                'echo -e "{}" > ~/.ipyslurm/sbatch_{}'.format(script, timestamp),
-                'chmod +x ~/.ipyslurm/sbatch_{}'.format(timestamp)]
-            command += ['~/.ipyslurm/sbatch_{}'.format(timestamp)]
+                f'echo -e "{script}" > ~/.ipyslurm/sbatch_{timestamp}',
+                f'chmod +x ~/.ipyslurm/sbatch_{timestamp}']
+            command += [f'~/.ipyslurm/sbatch_{timestamp}']
         command_args = [match.group(1) for match in re.finditer('\\{(.+?)\\}', args)]
         stdouts, stderrs = self._ssh.exec_command(command_args, verbose=False)
         if stderrs:
@@ -81,7 +81,7 @@ class Slurm:
         if lines:
             command = ['sbatch {} --wrap="{}"'.format(args, '\n'.join(command))]
         else:
-            command = ['sbatch {}'.format(args)]
+            command = [f'sbatch {args}']
         stdouts, _ = self._ssh.exec_command(command_init + command)
         if not stdouts or not stdouts[-1].startswith('Submitted batch job '):
             raise IOError('\n'.join(stdouts))
@@ -95,14 +95,14 @@ class Slurm:
         command_init = []
         command_del = []
         for i, j in zip(shebangs, shebangs[1:] + [None]):
-            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_{}'.format(i))
+            timestamp = datetime.datetime.now().strftime(f'%Y%m%d_%H%M%S_{i}')
             script = '\n'.join(x.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for x in lines[slice(i, j)])
             command_init += [
                 'mkdir -p ~/.ipyslurm',
-                'echo -e "{}" > ~/.ipyslurm/sbash_{}'.format(script, timestamp),
-                'chmod +x ~/.ipyslurm/sbash_{}'.format(timestamp)]
-            command_del += ['rm ~/.ipyslurm/sbash_{}'.format(timestamp)]
-            command += ['~/.ipyslurm/sbash_{}'.format(timestamp)]
+                f'echo -e "{script}" > ~/.ipyslurm/sbash_{timestamp}',
+                f'chmod +x ~/.ipyslurm/sbash_{timestamp}']
+            command_del += [f'rm ~/.ipyslurm/sbash_{timestamp}']
+            command += [f'~/.ipyslurm/sbash_{timestamp}']
         try:
             if command_init:
                 self._ssh.exec_command(command_init, verbose=False)

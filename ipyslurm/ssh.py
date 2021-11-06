@@ -12,7 +12,7 @@ from paramiko import AuthenticationException, BadAuthenticationType, SSHExceptio
 class SSHClient(paramiko.SSHClient):
 
     def __init__(self, *args, **kwargs):
-        super(SSHClient, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.load_system_host_keys()
         self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self._server = None
@@ -24,7 +24,7 @@ class SSHClient(paramiko.SSHClient):
         self.close()
         self._server = None
         try:
-            super(SSHClient, self).connect(server, username=username, password=password, *args, **kwargs)
+            super().connect(server, username=username, password=password, *args, **kwargs)
             self._server = server
         except (AuthenticationException, SSHException):
             pass
@@ -46,7 +46,7 @@ class SSHClient(paramiko.SSHClient):
         verbose = kwargs.pop('verbose', True)
         if not isinstance(command, str):
             command = '\n'.join(command)
-        _, stdout, stderr = super(SSHClient, self).exec_command(command, *args, **kwargs)
+        _, stdout, stderr = super().exec_command(command, *args, **kwargs)
         if block:
             stdout.channel.recv_exit_status()
         stdouts = [x.strip('\n') for x in stdout]
@@ -62,7 +62,7 @@ class SSHClient(paramiko.SSHClient):
         return self._server
 
     def invoke_shell(self, *args, **kwargs):
-        channel = super(SSHClient, self).invoke_shell(*args, **kwargs)
+        channel = super().invoke_shell(*args, **kwargs)
         output = ipywidgets.Output()
         stdin = ipywidgets.widgets.Text(placeholder='Enter bash command')
         display(ipywidgets.VBox((output, stdin)))
@@ -81,7 +81,7 @@ class SSHClient(paramiko.SSHClient):
                 channel.close()
                 stdin.close()
             else:
-                channel.send('{}\n'.format(widget.value))
+                channel.send(f'{widget.value}\n')
             if widget.value == 'clear':
                 lastline = output.outputs[-1]['text'].splitlines()[-1]
                 time.sleep(0.1)
