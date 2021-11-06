@@ -32,12 +32,10 @@ class SSH(paramiko.SSHClient):
         self.get_transport().set_keepalive(keepalive)
         self.server = server
 
-    def exec_command(self, command, *args, **kwargs):
-        block = kwargs.pop('block', True)
-        verbose = kwargs.pop('verbose', True)
+    def exec_command(self, command, block=True, verbose=True, **kwargs):
         if not isinstance(command, str):
             command = '\n'.join(command)
-        _, stdout, stderr = super().exec_command(command, *args, **kwargs)
+        _, stdout, stderr = super().exec_command(command, **kwargs)
         if block:
             stdout.channel.recv_exit_status()
         stdouts = [x.strip('\n') for x in stdout]
@@ -49,8 +47,8 @@ class SSH(paramiko.SSHClient):
                 print('\n'.join(stderrs), file=sys.stderr, flush=True)
         return stdouts, stderrs
 
-    def invoke_shell(self, *args, **kwargs):
-        channel = super().invoke_shell(*args, **kwargs)
+    def invoke_shell(self, **kwargs):
+        channel = super().invoke_shell(**kwargs)
         output = ipywidgets.Output()
         stdin = ipywidgets.widgets.Text(placeholder='Enter bash command')
         display(ipywidgets.VBox((output, stdin)))
