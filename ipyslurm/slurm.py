@@ -36,8 +36,7 @@ class Slurm:
             self.ssh = None
 
     def sbatch(self, lines, args=None):
-        if self.ssh is None:
-            raise AuthenticationException('Not logged in to server')
+        self._verify_login()
         if args is None:
             args = []
         args = ' '.join(args + [x.replace('#SBATCH', '').strip() for x in lines if x.startswith('#SBATCH')])
@@ -69,8 +68,7 @@ class Slurm:
         return int(stdouts[-1].lstrip('Submitted batch job '))
 
     def script(self, lines, *args, **kwargs):
-        if self.ssh is None:
-            raise AuthenticationException('Not logged in to server')
+        self._verify_login()
         shebangs = [i for i, x in enumerate(lines) if x.startswith('#!')]
         command = lines[:shebangs[0]] if shebangs else lines
         command_init = []
@@ -94,10 +92,14 @@ class Slurm:
                 self.ssh.exec_command(command_del, verbose=False)
 
     def sftp(self, lines, quiet=False):
-        if self.ssh is None:
-            raise AuthenticationException('Not logged in to server')
+        self._verify_login()
         ftp = sftp.SFTP(self.ssh)
         ftp.exec_commands(lines, quiet)
 
     def shell(self):
+        self._verify_login()
         self.ssh.invoke_shell()
+
+    def _verify_login(self):
+        if self.ssh is None:
+            raise AuthenticationException('Not logged in to a server')
