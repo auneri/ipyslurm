@@ -23,22 +23,7 @@ class SSHClient(paramiko.SSHClient):
     def connect(self, server, username, password=None, *args, **kwargs):
         self.close()
         self._server = None
-        try:
-            super().connect(server, username=username, password=password, *args, **kwargs)
-            self._server = server
-        except (AuthenticationException, SSHException):
-            pass
-        if self._server is None:
-            try:
-                def handler(title, instructions, prompt_list):
-                    if title:
-                        print(title.strip())
-                    if instructions:
-                        print(instructions.strip())
-                    return [show_input and input(prompt.strip()) or getpass.getpass(prompt.strip()) for prompt, show_input in prompt_list]
-                self.get_transport().auth_interactive(username, handler)
-            except BadAuthenticationType:
-                self.get_transport().auth_password(username, getpass.getpass('Password:'))
+        super().connect(server, username=username, password=password, *args, **kwargs)
         self._server = server
 
     def exec_command(self, command, *args, **kwargs):

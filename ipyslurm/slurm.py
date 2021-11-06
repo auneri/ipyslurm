@@ -13,16 +13,15 @@ class Slurm:
 
     def __init__(self):
         self._ssh = None
-        self._ssh_data = None
 
     def __del__(self):
         self.logout()
 
     def __repr__(self):
-        servers = [x.get_server() for x in (self._ssh, self._ssh_data) if x is not None]
+        servers = [x.get_server() for x in (self._ssh,) if x is not None]
         return 'Logged in to {}'.format(' and '.join(servers)) if servers else 'Not logged in to server'
 
-    def login(self, server, username=None, password=None, server_data=None):
+    def login(self, server, username=None, password=None):
         if username is None:
             username = getpass.getuser()
         try:
@@ -33,26 +32,12 @@ class Slurm:
         except:  # noqa: E722
             self._ssh = None
             raise
-        if server_data is not None:
-            try:
-                sys.stdout.flush()
-                print(f'Please wait for a new verification code before logging in to {server_data}', file=sys.stderr, flush=True)
-                print(f'Logging in to {username}@{server_data}')
-                self._ssh_data = SSHClient()
-                self._ssh_data.connect(server_data, username, password)
-                self._ssh_data.get_transport().set_keepalive(30)
-            except:  # noqa: E722
-                self._ssh_data = None
-                raise
         return self
 
     def logout(self):
         if self._ssh is not None:
             print(f'Logging out of {self._ssh.get_server()}')
             self._ssh = None
-        if self._ssh_data is not None:
-            print(f'Logging out of {self._ssh_data.get_server()}')
-            self._ssh_data = None
 
     def sbatch(self, lines, args=None):
         if self._ssh is None:
@@ -116,7 +101,7 @@ class Slurm:
     def sftp(self):
         if self._ssh is None:
             raise AuthenticationException('Not logged in to server')
-        ssh = self._ssh_data or self._ssh
+        ssh = self._ssh
         ftp = ssh.open_sftp()
         try:
             yield ssh, ftp

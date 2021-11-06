@@ -310,12 +310,11 @@ class IPySlurm(magic.Magics):
     @magic_arguments.argument('server', help='Address of server')
     @magic_arguments.argument('--username', help='Username, interactively requested if not provided')
     @magic_arguments.argument('--password', help='Password, interactively requested if not provided')
-    @magic_arguments.argument('--data-server', metavar='ADDRESS', help='Address of server for data transfers')
     @magic.line_magic
     def slogin(self, line):
         """Login to server."""
         args = magic_arguments.parse_argstring(self.slogin, line)
-        self._slurm.login(args.server, args.username, args.password, args.data_server)
+        self._slurm.login(args.server, args.username, args.password)
         return self._slurm
 
     @magic.line_magic
