@@ -11,8 +11,10 @@ from . import sftp, ssh
 
 class Slurm:
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.ssh = None
+        if len(args) or len(kwargs):
+            self.login(*args, **kwargs)
 
     def __del__(self):
         self.logout()
@@ -24,14 +26,9 @@ class Slurm:
     def login(self, server, username=None, password=None):
         if username is None:
             username = getpass.getuser()
-        try:
-            print(f'Logging in to {username}@{server}')
-            self.ssh = ssh.SSH()
-            self.ssh.connect(server, username, password)
-            self.ssh.get_transport().set_keepalive(30)
-        except:  # noqa: E722
-            self.ssh = None
-            raise
+        print(f'Logging in to {username}@{server}')
+        self.ssh = ssh.SSH(server, username, password)
+        self.ssh.get_transport().set_keepalive(30)
         return self
 
     def logout(self):
