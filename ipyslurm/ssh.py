@@ -15,16 +15,16 @@ class SSH(paramiko.SSHClient):
         super().__init__(*args, **kwargs)
         self.load_system_host_keys()
         self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self._server = None
+        self.server = None
 
     def __del__(self):
         self.close()
 
     def connect(self, server, username, password=None, *args, **kwargs):
         self.close()
-        self._server = None
+        self.server = None
         super().connect(server, username=username, password=password, *args, **kwargs)
-        self._server = server
+        self.server = server
 
     def exec_command(self, command, *args, **kwargs):
         block = kwargs.pop('block', True)
@@ -42,9 +42,6 @@ class SSH(paramiko.SSHClient):
             if stderrs:
                 print('\n'.join(stderrs), file=sys.stderr, flush=True)
         return stdouts, stderrs
-
-    def get_server(self):
-        return self._server
 
     def invoke_shell(self, *args, **kwargs):
         channel = super().invoke_shell(*args, **kwargs)

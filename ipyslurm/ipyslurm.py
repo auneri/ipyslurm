@@ -63,17 +63,17 @@ class IPySlurm(magic.Magics):
             keys = 'JobName', 'JobId', 'JobState', 'Reason', 'SubmitTime', 'StartTime', 'RunTime'
             try:
                 while True:
-                    stdouts, _ = self._slurm._ssh.exec_command(f'scontrol show jobid {job}', verbose=False)
+                    stdouts, _ = self._slurm.ssh.exec_command(f'scontrol show jobid {job}', verbose=False)
                     details = dict(x.split('=', 1) for x in '\n'.join(stdouts).split())
                     clear_output(wait=True)
                     if args.tail is not None and details['JobState'] in ('RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED'):
-                        self._slurm._ssh.exec_command(f'tail --lines={args.tail} {details["StdOut"]}')
+                        self._slurm.ssh.exec_command(f'tail --lines={args.tail} {details["StdOut"]}')
                     else:
                         print('\n'.join('{1:>{0}}: {2}'.format(len(max(keys, key=len)), x, details[x]) for x in keys))
                     if details['JobState'] not in ('PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING'):
                         break
             except KeyboardInterrupt:
-                self._slurm._ssh.exec_command(f'scancel {job}')
+                self._slurm.ssh.exec_command(f'scancel {job}')
                 print(f'Canceling job {job}', file=sys.stderr)
 
     @magic_arguments.magic_arguments()
