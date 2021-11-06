@@ -11,7 +11,6 @@ import timeit
 from IPython.core import magic, magic_arguments
 from IPython.display import clear_output
 
-from .progress import ProgressBar
 from .slurm import Slurm
 
 

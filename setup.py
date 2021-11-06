@@ -28,5 +28,6 @@ setuptools.setup(
     install_requires=[
         'ipython',
         'ipywidgets',
-        'paramiko'],
+        'paramiko',
+        'tqdm'],
     python_requires='>=3.7')

@@ -5,7 +5,7 @@ import re
 import shlex
 import stat
 
-from .progress import ProgressBar
+from tqdm.auto import tqdm
 
 
 class SFTP:
@@ -40,7 +40,7 @@ class SFTP:
             'symlink': 'symlink'}
         lines = [x for x in cell.splitlines() if x.strip() and not x.lstrip().startswith('#')]
         ssh, ftp = self.ssh, self.ftp
-        pbars = [ProgressBar(hide=quiet or not any(x.startswith(y) for y in ('get', 'put', 'rm'))) for x in lines]
+        pbars = [tqdm(desc=x.split()[0], position=0) if any(x.split()[0] == y for y in ('get', 'put', 'rm')) else None for x in lines]
         for line, pbar in zip(lines, pbars):
             argv = shlex.split(line, posix=False)
             command = commands.get(argv[0])
@@ -72,10 +72,11 @@ class SFTP:
                             pbar.update()
                         if not recurse:
                             break
-                    pbar.close(clear=len(pbar) == 0)
                 else:
+                    pbar.reset(1)
                     get(ftp, remote, local, resume)
-                    pbar.close(clear=True)
+                    pbar.update()
+                pbar.close()
             elif argv[0] == 'put':
                 recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
                 resume = bool([x for x in argv if x.startswith('-') and 'a' in x])
@@ -98,10 +99,11 @@ class SFTP:
                             pbar.update()
                         if not recurse:
                             break
-                    pbar.close(clear=len(pbar) == 0)
                 else:
+                    pbar.reset(1)
                     put(ftp, local, remote, resume)
-                    pbar.close(clear=True)
+                    pbar.update()
+                pbar.close()
             elif argv[0] == 'lcd':
                 if len(argv) != 2:
                     raise ValueError('lcd local_directory')
@@ -123,10 +125,11 @@ class SFTP:
                         for dirname in dirnames:
                             os.rmdir(os.path.join(dirpath, dirname))
                     os.rmdir(local)
-                    pbar.close(clear=len(pbar) == 0)
                 else:
+                    pbar.reset(1)
                     os.remove(local)
-                    pbar.close(clear=True)
+                    pbar.update()
+                pbar.close()
             elif argv[0] == 'ls':
                 if len(argv) != 2:
                     raise ValueError('ls remote_directory')
@@ -150,10 +153,11 @@ class SFTP:
                         for dirname in dirnames:
                             ftp.rmdir(f'{dirpath}/{dirname}')
                     ftp.rmdir(remote)
-                    pbar.close(clear=len(pbar) == 0)
                 else:
+                    pbar.reset(1)
                     ftp.remove(remote)
-                    pbar.close(clear=True)
+                    pbar.update()
+                pbar.close()
             elif argv[0] == 'rmdir':
                 if len(argv) != 2:
                     raise ValueError('rmdir remote_directory')

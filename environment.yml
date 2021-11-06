@@ -6,6 +6,7 @@ dependencies:
   - ipywidgets>=7
   - paramiko>=2.5
   - python>=3.7
+  - tqdm>=4
   # test
   - flake8>=4.0
   - flake8-builtins
