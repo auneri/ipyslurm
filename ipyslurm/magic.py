@@ -9,10 +9,10 @@ from . import slurm
 
 
 @magic.magics_class
-class IPySlurm(magic.Magics):
+class SlurmMagics(magic.Magics):
 
     def __init__(self, *args, **kwargs):
-        super(IPySlurm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._slurm = slurm.Slurm()
 
     @magic_arguments.magic_arguments()
