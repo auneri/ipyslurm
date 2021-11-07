@@ -33,7 +33,8 @@ class IPySlurm(magic.Magics):
         args = magic_arguments.parse_argstring(self.sbash, line)
         start = timeit.default_timer()
         try:
-            for stdouts in self._slurm.script(cell.splitlines()):
+            while True:
+                stdouts = self._slurm.script(cell.splitlines())
                 elapsed = timeit.default_timer() - start
                 if args.timeout is not None and elapsed > args.timeout:
                     print(f'\nsbash terminated after {elapsed:.1f} seconds')
@@ -114,5 +115,4 @@ class IPySlurm(magic.Magics):
     def swritefile(self, line, cell):
         args = magic_arguments.parse_argstring(self.swritefile, line)
         lines = ['cat << \\EOF {} {}'.format('>>' if args.append else '>', args.filepath)] + cell.splitlines() + ['EOF']
-        for _ in self._slurm.script(lines):
-            break
+        self._slurm.script(lines)

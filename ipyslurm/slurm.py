@@ -83,8 +83,8 @@ class Slurm:
         try:
             if command_init:
                 self.ssh.exec_command(command_init)
-            while True:
-                yield self.ssh.exec_command(command, *args, **kwargs)
+            stdouts = self.ssh.exec_command(command, *args, **kwargs)
+            return '\n'.join(stdouts)
         finally:
             if command_del:
                 self.ssh.exec_command(command_del)
