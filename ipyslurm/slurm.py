@@ -52,6 +52,11 @@ class Slurm:
             if command_del:
                 self.ssh.exec_command(command_del)
 
+    def disk_usage(self, directory, depth=0):
+        print(self.command(f'df --human-readable {directory}'))
+        print('Size Directory')
+        print(self.command(f'du --human-readable --max-depth {depth} {directory} | sort -k2,2 -k1,1hr'))
+
     def interact(self):
         self._verify_login()
         self.ssh.invoke_shell()
