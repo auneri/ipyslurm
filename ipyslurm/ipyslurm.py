@@ -78,16 +78,21 @@ class IPySlurm(magic.Magics):
         self._slurm.interact()
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('server', help='Address of server')
+    @magic_arguments.argument('--server', help='Address of server')
     @magic_arguments.argument('--username', help='Username, interactively requested if not provided')
     @magic_arguments.argument('--password', help='Password, interactively requested if not provided')
+    @magic_arguments.argument('--instance', help='An existing slurm instance')
     @magic.line_magic
-    def slogin(self, line):
+    @magic.needs_local_scope
+    def slogin(self, line, local_ns):
         """Login to server."""
         args = magic_arguments.parse_argstring(self.slogin, line)
-        username = getpass.getuser() if args.username is None else args.username
-        password = getpass.getpass() if args.password is None else args.password
-        self._slurm.login(args.server, username, password)
+        if args.instance is not None:
+            self._slurm = local_ns.get(args.instance)
+        else:
+            username = getpass.getuser() if args.username is None else args.username
+            password = getpass.getpass() if args.password is None else args.password
+            self._slurm.login(args.server, username, password)
 
     @magic_arguments.magic_arguments()
     @magic.line_magic
