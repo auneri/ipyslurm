@@ -58,7 +58,7 @@ class SSH(paramiko.SSHClient):
     def invoke_shell(self, **kwargs):
         channel = super().invoke_shell(**kwargs)
         output = ipywidgets.Output()
-        stdin = ipywidgets.widgets.Text(placeholder='Enter bash command')
+        stdin = ipywidgets.widgets.Text(placeholder='Enter shell command')
         display(ipywidgets.VBox((output, stdin)))
 
         def writeall(channel_, output_):

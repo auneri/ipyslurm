@@ -22,33 +22,6 @@ class IPySlurm(magic.Magics):
         self._slurm = Slurm()
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('--period', type=float, metavar='SECONDS', help='Repeat execution with a given periodicity')
-    @magic_arguments.argument('--timeout', type=float, metavar='SECONDS', help='Timeout for when used with --period')
-    @magic_arguments.argument('--stdout', metavar='LIST', help='Variable to store stdout')
-    @magic_arguments.argument('--stderr', metavar='LIST', help='Variable to store stderr')
-    @magic.cell_magic
-    @magic.needs_local_scope
-    def sbash(self, line, cell, local_ns):
-        """Execute a bash script on server."""
-        args = magic_arguments.parse_argstring(self.sbash, line)
-        start = timeit.default_timer()
-        try:
-            while True:
-                stdouts = self._slurm.script(cell.splitlines())
-                elapsed = timeit.default_timer() - start
-                if args.timeout is not None and elapsed > args.timeout:
-                    print(f'\nsbash terminated after {elapsed:.1f} seconds')
-                elif args.period is not None:
-                    time.sleep(args.period)
-                    clear_output(wait=True)
-                    continue
-                break
-        except KeyboardInterrupt:
-            pass
-        if args.stdout is not None:
-            local_ns.update({args.stdout: stdouts})
-
-    @magic_arguments.magic_arguments()
     @magic_arguments.argument('--wait', action='store_true', help='Block until execution is complete')
     @magic_arguments.argument('--tail', type=int, metavar='N', help='Block and print last N lines of the log')
     @magic_arguments.argument('--args', nargs='*', metavar='ARG', help='Additional arguments to sbatch')
@@ -76,6 +49,33 @@ class IPySlurm(magic.Magics):
                 print(f'Canceling job {job}', file=sys.stderr)
 
     @magic_arguments.magic_arguments()
+    @magic_arguments.argument('--period', type=float, metavar='SECONDS', help='Repeat execution with a given periodicity')
+    @magic_arguments.argument('--timeout', type=float, metavar='SECONDS', help='Timeout for when used with --period')
+    @magic_arguments.argument('--stdout', metavar='LIST', help='Variable to store stdout')
+    @magic_arguments.argument('--stderr', metavar='LIST', help='Variable to store stderr')
+    @magic.cell_magic
+    @magic.needs_local_scope
+    def scommand(self, line, cell, local_ns):
+        """Execute command on server."""
+        args = magic_arguments.parse_argstring(self.scommand, line)
+        start = timeit.default_timer()
+        try:
+            while True:
+                stdouts = self._slurm.command(cell.splitlines())
+                elapsed = timeit.default_timer() - start
+                if args.timeout is not None and elapsed > args.timeout:
+                    print(f'\nsbash terminated after {elapsed:.1f} seconds')
+                elif args.period is not None:
+                    time.sleep(args.period)
+                    clear_output(wait=True)
+                    continue
+                break
+        except KeyboardInterrupt:
+            pass
+        if args.stdout is not None:
+            local_ns.update({args.stdout: stdouts})
+
+    @magic_arguments.magic_arguments()
     @magic_arguments.argument('--quiet', action='store_true', help='Disable progress bar')
     @magic.cell_magic
     def sftp(self, line, cell):
@@ -87,6 +87,10 @@ class IPySlurm(magic.Magics):
         args = magic_arguments.parse_argstring(self.sftp, line)
         lines = [x for x in cell.splitlines() if x.strip() and not x.lstrip().startswith('#')]
         self._slurm.sftp(lines, args.quiet)
+
+    @magic.line_magic
+    def sinteract(self, line):
+        self._slurm.interact()
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('server', help='Address of server')
@@ -104,10 +108,6 @@ class IPySlurm(magic.Magics):
         """Logout of server."""
         self._slurm.logout()
 
-    @magic.line_magic
-    def sshell(self, line):
-        self._slurm.shell()
-
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('filepath', help='Path of file')
     @magic_arguments.argument('--append', action='store_true', help='Append contents of the cell to an existing file')
@@ -115,4 +115,4 @@ class IPySlurm(magic.Magics):
     def swritefile(self, line, cell):
         args = magic_arguments.parse_argstring(self.swritefile, line)
         lines = ['cat << \\EOF {} {}'.format('>>' if args.append else '>', args.filepath)] + cell.splitlines() + ['EOF']
-        self._slurm.script(lines)
+        self._slurm.command(lines)

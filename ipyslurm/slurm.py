@@ -24,6 +24,36 @@ class Slurm:
         servers = [x.server for x in (self.ssh,) if x is not None]
         return 'Logged in to {}'.format(' and '.join(servers)) if servers else 'Not logged in to server'
 
+    def command(self, lines, *args, **kwargs):
+        self._verify_login()
+        shebangs = [i for i, x in enumerate(lines) if x.startswith('#!')]
+        command = lines[:shebangs[0]] if shebangs else lines
+        command_init = []
+        command_del = []
+        for i, j in zip(shebangs, shebangs[1:] + [None]):
+            timestamp = datetime.datetime.now().strftime(f'%Y%m%d_%H%M%S_{i}')
+            script = '\n'.join(x.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for x in lines[slice(i, j)])
+            command_init += [
+                'mkdir -p ~/.ipyslurm',
+                f'echo -e "{script}" > ~/.ipyslurm/sbash_{timestamp}',
+                f'chmod +x ~/.ipyslurm/sbash_{timestamp}']
+            command_del += [f'rm ~/.ipyslurm/sbash_{timestamp}']
+            command += [f'~/.ipyslurm/sbash_{timestamp}']
+        try:
+            if command_init:
+                self.ssh.exec_command(command_init)
+            stdouts = self.ssh.exec_command(command, *args, **kwargs)
+            for stdout in stdouts:
+                logging.getLogger('ipyslurm.slurm').debug(stdout)
+            return '\n'.join(stdouts)
+        finally:
+            if command_del:
+                self.ssh.exec_command(command_del)
+
+    def interact(self):
+        self._verify_login()
+        self.ssh.invoke_shell()
+
     def login(self, server, username=None, password=None, **kwargs):
         if username is None:
             username = getpass.getuser()
@@ -67,40 +97,10 @@ class Slurm:
         logging.getLogger('ipyslurm.slurm').debug(stdouts[-1])
         return int(stdouts[-1].lstrip('Submitted batch job '))
 
-    def script(self, lines, *args, **kwargs):
-        self._verify_login()
-        shebangs = [i for i, x in enumerate(lines) if x.startswith('#!')]
-        command = lines[:shebangs[0]] if shebangs else lines
-        command_init = []
-        command_del = []
-        for i, j in zip(shebangs, shebangs[1:] + [None]):
-            timestamp = datetime.datetime.now().strftime(f'%Y%m%d_%H%M%S_{i}')
-            script = '\n'.join(x.replace('\\', '\\\\\\').replace('$', '\\$').replace('"', '\\"') for x in lines[slice(i, j)])
-            command_init += [
-                'mkdir -p ~/.ipyslurm',
-                f'echo -e "{script}" > ~/.ipyslurm/sbash_{timestamp}',
-                f'chmod +x ~/.ipyslurm/sbash_{timestamp}']
-            command_del += [f'rm ~/.ipyslurm/sbash_{timestamp}']
-            command += [f'~/.ipyslurm/sbash_{timestamp}']
-        try:
-            if command_init:
-                self.ssh.exec_command(command_init)
-            stdouts = self.ssh.exec_command(command, *args, **kwargs)
-            for stdout in stdouts:
-                logging.getLogger('ipyslurm.slurm').debug(stdout)
-            return '\n'.join(stdouts)
-        finally:
-            if command_del:
-                self.ssh.exec_command(command_del)
-
     def sftp(self, lines, quiet=False):
         self._verify_login()
         ftp = sftp.SFTP(self.ssh)
         ftp.exec_commands(lines, quiet)
-
-    def shell(self):
-        self._verify_login()
-        self.ssh.invoke_shell()
 
     def _verify_login(self):
         if self.ssh is None:
