@@ -4,7 +4,13 @@ This project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html
 and the format of this document is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
-See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.6.0...master) for detailed changes.
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v2.0.0...main) for detailed changes.
+
+## 2.0.0 -- 2021-11-07
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.6.0...v2.0.0) for detailed changes.
+* Backwards incompatible changes, e.g., renamed magics ([link](https://github.com/auneri/ipyslurm/commit/9261914b))
+* Refactor slurm module for standalone use ([link](https://github.com/auneri/ipyslurm/commit/c2401c86))
+* Dropped custom logic to support MARCC ([link](https://github.com/auneri/ipyslurm/commit/a6c373ea))
 
 ## 1.6.0 -- 2020-12-18
 See [individual commits](https://github.com/auneri/ipyslurm/compare/v1.5.0...v1.6.0) for detailed changes.
