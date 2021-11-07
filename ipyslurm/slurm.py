@@ -1,8 +1,10 @@
 import datetime
+import itertools
 import logging
 import re
 import shlex
 
+from IPython.display import clear_output
 from paramiko import AuthenticationException
 
 from . import sftp, ssh
@@ -99,6 +101,13 @@ class Slurm:
         logging.getLogger('ipyslurm.slurm').debug(stdouts[-1])
         return int(stdouts[-1].split()[-1])
 
+    def scontrol_show_job(self, job):
+        stdouts = self.ssh.exec_command(f'scontrol show job {job} --details')
+        details = [list(x) for _, x in itertools.groupby(stdouts, key=''.__ne__)][::2]
+        details = [re.split(r'\s*(\w+)=', ' '.join(x)) for x in details]
+        details = [dict([x[i:i+2] for i in range(1, len(x), 2)]) for x in details]
+        return sorted(details, key=lambda x: int(x['ArrayTaskId']) if 'ArrayTaskId' in x and x['ArrayTaskId'].isnumeric() else 0)
+
     def sftp(self, lines):
         self._verify_login()
         if isinstance(lines, str):
@@ -106,6 +115,25 @@ class Slurm:
         lines = [x for x in lines if x.strip() and not x.lstrip().startswith('#')]
         ftp = sftp.SFTP(self.ssh)
         ftp.exec_commands(lines)
+
+    def tail(self, job, lines=1, clear=True):
+        while True:
+            details = self.scontrol_show_job(job)
+            stdouts = []
+            for detail in details:
+                stdouts.append(self.ssh.exec_command(f'if test -f "{detail["StdOut"]}"; then tail --lines={lines} {detail["StdOut"]}; fi'))
+            if clear:
+                clear_output(wait=True)
+            for i, detail in enumerate(details):
+                jobname = detail['JobName']
+                if 'ArrayTaskId' in detail:
+                    jobname = f'{jobname} [{detail["ArrayTaskId"]}]'
+                for stdout in stdouts[i]:
+                    print(f'{jobname}: {stdout}', flush=True)
+                if len(stdouts[i]) == 0:
+                    print(f'{jobname}: {detail["JobState"]}', flush=True)
+            if all(x['JobState'] not in ('COMPLETING', 'CONFIGURING', 'PENDING', 'RUNNING') for x in details):
+                break
 
     def writefile(self, filepath, lines, append=False):
         if isinstance(lines, str):
