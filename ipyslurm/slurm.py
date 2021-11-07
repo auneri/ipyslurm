@@ -107,6 +107,12 @@ class Slurm:
         ftp = sftp.SFTP(self.ssh)
         ftp.exec_commands(lines)
 
+    def writefile(self, filepath, lines, append=False):
+        if isinstance(lines, str):
+            lines = lines.splitlines()
+        redirect = '>>' if append else '>'
+        self.command([f'cat << \\EOF {redirect} {filepath}'] + lines + ['EOF'])
+
     def _verify_login(self):
         if self.ssh is None:
             raise AuthenticationException('Not logged in to a server')
