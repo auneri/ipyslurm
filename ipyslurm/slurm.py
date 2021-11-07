@@ -101,6 +101,9 @@ class Slurm:
         logging.getLogger('ipyslurm.slurm').debug(stdouts[-1])
         return int(stdouts[-1].split()[-1])
 
+    def scancel(self, job):
+        self.command(f'scancel {job}')
+
     def scontrol_show_job(self, job):
         stdouts = self.ssh.exec_command(f'scontrol show job {job} --details')
         details = [list(x) for _, x in itertools.groupby(stdouts, key=''.__ne__)][::2]
@@ -115,6 +118,11 @@ class Slurm:
         lines = [x for x in lines if x.strip() and not x.lstrip().startswith('#')]
         ftp = sftp.SFTP(self.ssh)
         ftp.exec_commands(lines)
+
+    def squeue(self, output_format=None):
+        if output_format is None:
+            output_format = '%.20j %.15i %.7M %.10l %.7u %.9P %.8T %R'
+        print(self.command(f'squeue --format "{output_format}"'))
 
     def tail(self, job, lines=1, clear=True):
         while True:
