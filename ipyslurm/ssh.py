@@ -32,7 +32,7 @@ class SSH(paramiko.SSHClient):
         self.get_transport().set_keepalive(keepalive)
         self.server = server
 
-    def exec_command(self, command, block=True, verbose=True, **kwargs):
+    def exec_command(self, command, block=True, error=True, **kwargs):
         if not isinstance(command, str):
             command = '\n'.join(command)
         _, stdout, stderr = super().exec_command(command, **kwargs)
@@ -40,12 +40,12 @@ class SSH(paramiko.SSHClient):
             stdout.channel.recv_exit_status()
         stdouts = [x.strip('\n') for x in stdout]
         stderrs = [x.strip('\n') for x in stderr]
-        if verbose:
-            if stdouts:
-                print('\n'.join(stdouts), file=sys.stdout, flush=True)
+        if error:
             if stderrs:
-                print('\n'.join(stderrs), file=sys.stderr, flush=True)
-        return stdouts, stderrs
+                raise RuntimeError('Failed to execute command:\nstdin: "{}"\n stderr: "{}"'.format(command, '\n'.join(stderrs)))
+            return stdouts
+        else:
+            return stdouts, stderrs
 
     def invoke_shell(self, **kwargs):
         channel = super().invoke_shell(**kwargs)

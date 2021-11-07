@@ -195,7 +195,7 @@ def normalize(path, ssh=None, ftp=None):
         cwd = ftp.getcwd()
         if cwd is not None:
             path = f'{cwd}/{path}'
-        stdouts, _ = ssh.exec_command(f'readlink -f "{path}"', verbose=False)
+        stdouts = ssh.exec_command(f'readlink -f "{path}"')
         if len(stdouts) != 1:
             raise OSError(f'Failed to find {path}')
         return stdouts[0]

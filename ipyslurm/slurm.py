@@ -53,16 +53,14 @@ class Slurm:
                 f'chmod +x ~/.ipyslurm/sbatch_{timestamp}']
             command += [f'~/.ipyslurm/sbatch_{timestamp}']
         command_args = [match.group(1) for match in re.finditer('\\{(.+?)\\}', args)]
-        stdouts, stderrs = self.ssh.exec_command(command_args, verbose=False)
-        if stderrs:
-            raise IOError('\n'.join(stderrs))
+        stdouts = self.ssh.exec_command(command_args)
         for stdout in stdouts:
             args = re.sub('\\{(.+?)\\}', stdout, args, count=1)
         if lines:
             command = ['sbatch {} --wrap="{}"'.format(args, '\n'.join(command))]
         else:
             command = [f'sbatch {args}']
-        stdouts, _ = self.ssh.exec_command(command_init + command)
+        stdouts = self.ssh.exec_command(command_init + command)
         if not stdouts or not stdouts[-1].startswith('Submitted batch job '):
             raise IOError('\n'.join(stdouts))
         return int(stdouts[-1].lstrip('Submitted batch job '))
@@ -84,12 +82,12 @@ class Slurm:
             command += [f'~/.ipyslurm/sbash_{timestamp}']
         try:
             if command_init:
-                self.ssh.exec_command(command_init, verbose=False)
+                self.ssh.exec_command(command_init)
             while True:
                 yield self.ssh.exec_command(command, *args, **kwargs)
         finally:
             if command_del:
-                self.ssh.exec_command(command_del, verbose=False)
+                self.ssh.exec_command(command_del)
 
     def sftp(self, lines, quiet=False):
         self._verify_login()

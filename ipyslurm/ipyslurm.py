@@ -33,7 +33,7 @@ class IPySlurm(magic.Magics):
         args = magic_arguments.parse_argstring(self.sbash, line)
         start = timeit.default_timer()
         try:
-            for stdouts, stderrs in self._slurm.script(cell.splitlines(), verbose=args.stdout is None and args.stderr is None):
+            for stdouts in self._slurm.script(cell.splitlines()):
                 elapsed = timeit.default_timer() - start
                 if args.timeout is not None and elapsed > args.timeout:
                     print(f'\nsbash terminated after {elapsed:.1f} seconds')
@@ -46,8 +46,6 @@ class IPySlurm(magic.Magics):
             pass
         if args.stdout is not None:
             local_ns.update({args.stdout: stdouts})
-        if args.stderr is not None:
-            local_ns.update({args.stderr: stderrs})
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('--wait', action='store_true', help='Block until execution is complete')
@@ -63,7 +61,7 @@ class IPySlurm(magic.Magics):
             keys = 'JobName', 'JobId', 'JobState', 'Reason', 'SubmitTime', 'StartTime', 'RunTime'
             try:
                 while True:
-                    stdouts, _ = self._slurm.ssh.exec_command(f'scontrol show jobid {job}', verbose=False)
+                    stdouts = self._slurm.ssh.exec_command(f'scontrol show jobid {job}')
                     details = dict(x.split('=', 1) for x in '\n'.join(stdouts).split())
                     clear_output(wait=True)
                     if args.tail is not None and details['JobState'] in ('RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED'):
@@ -116,5 +114,5 @@ class IPySlurm(magic.Magics):
     def swritefile(self, line, cell):
         args = magic_arguments.parse_argstring(self.swritefile, line)
         lines = ['cat << \\EOF {} {}'.format('>>' if args.append else '>', args.filepath)] + cell.splitlines() + ['EOF']
-        for _ in self._slurm.script(lines, verbose=True):
+        for _ in self._slurm.script(lines):
             break
