@@ -76,7 +76,6 @@ class IPySlurm(magic.Magics):
             local_ns.update({args.stdout: stdouts})
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('--quiet', action='store_true', help='Disable progress bar')
     @magic.cell_magic
     def sftp(self, line, cell):
         """File transfer over secure shell.
@@ -84,9 +83,9 @@ class IPySlurm(magic.Magics):
         Supported commands: cd, chmod, chown, get, lcd, lls, lmkdir, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
         See interactive commands section of http://man.openbsd.org/sftp for details.
         """
-        args = magic_arguments.parse_argstring(self.sftp, line)
+        magic_arguments.parse_argstring(self.sftp, line)
         lines = [x for x in cell.splitlines() if x.strip() and not x.lstrip().startswith('#')]
-        self._slurm.sftp(lines, args.quiet)
+        self._slurm.sftp(lines)
 
     @magic.line_magic
     def sinteract(self, line):
