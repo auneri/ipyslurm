@@ -19,7 +19,6 @@ class IPySlurm(magic.Magics):
     @magic_arguments.argument('--tail', type=int, metavar='N', help='Block and print last N lines of the log')
     @magic_arguments.argument('--args', nargs='*', metavar='ARG', help='Additional arguments to sbatch')
     @magic.cell_magic
-    @magic.line_magic
     def sbatch(self, line, cell=''):
         """Submit a batch script to Slurm."""
         args = magic_arguments.parse_argstring(self.sbatch, line)
