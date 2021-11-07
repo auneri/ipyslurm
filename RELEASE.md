@@ -8,10 +8,8 @@
 2. Upload new package to PyPI
 
     ```bash
-    cd $IPYSLURM_PATH
-    conda activate $CONDA_ENVIRONMENT
-    python setup.py sdist bdist_wheel
     conda activate base
+    python setup.py sdist bdist_wheel
     twine upload dist/*
     ```
 
