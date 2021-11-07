@@ -1,17 +1,11 @@
-import datetime
-import importlib
-import os
-import re
-import shlex
-import stat
-import sys
+import getpass
 import time
 import timeit
 
 from IPython.core import magic, magic_arguments
 from IPython.display import clear_output
 
-from .slurm import Slurm
+from . import slurm
 
 
 @magic.magics_class
@@ -19,10 +13,9 @@ class IPySlurm(magic.Magics):
 
     def __init__(self, *args, **kwargs):
         super(IPySlurm, self).__init__(*args, **kwargs)
-        self._slurm = Slurm()
+        self._slurm = slurm.Slurm()
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('--wait', action='store_true', help='Block until execution is complete')
     @magic_arguments.argument('--tail', type=int, metavar='N', help='Block and print last N lines of the log')
     @magic_arguments.argument('--args', nargs='*', metavar='ARG', help='Additional arguments to sbatch')
     @magic.cell_magic
@@ -30,65 +23,58 @@ class IPySlurm(magic.Magics):
     def sbatch(self, line, cell=''):
         """Submit a batch script to Slurm."""
         args = magic_arguments.parse_argstring(self.sbatch, line)
-        job = self._slurm.sbatch(cell.splitlines(), args.args)
-        if args.wait or args.tail is not None:
-            keys = 'JobName', 'JobId', 'JobState', 'Reason', 'SubmitTime', 'StartTime', 'RunTime'
+        job = self._slurm.sbatch(cell, args.args)
+        print(f'Submitted batch job {job}')
+        if args.tail is not None:
             try:
-                while True:
-                    stdouts = self._slurm.ssh.exec_command(f'scontrol show jobid {job}')
-                    details = dict(x.split('=', 1) for x in '\n'.join(stdouts).split())
-                    clear_output(wait=True)
-                    if args.tail is not None and details['JobState'] in ('RUNNING', 'COMPLETING', 'COMPLETED', 'FAILED'):
-                        self._slurm.ssh.exec_command(f'tail --lines={args.tail} {details["StdOut"]}')
-                    else:
-                        print('\n'.join('{1:>{0}}: {2}'.format(len(max(keys, key=len)), x, details[x]) for x in keys))
-                    if details['JobState'] not in ('PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING'):
-                        break
+                self._slurm.tail(job, lines=args.tail)
             except KeyboardInterrupt:
-                self._slurm.ssh.exec_command(f'scancel {job}')
-                print(f'Canceling job {job}', file=sys.stderr)
+                self._slurm.scancel(job)
+                print(f'Canceling batch job {job}')
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('--period', type=float, metavar='SECONDS', help='Repeat execution with a given periodicity')
     @magic_arguments.argument('--timeout', type=float, metavar='SECONDS', help='Timeout for when used with --period')
-    @magic_arguments.argument('--stdout', metavar='LIST', help='Variable to store stdout')
-    @magic_arguments.argument('--stderr', metavar='LIST', help='Variable to store stderr')
+    @magic_arguments.argument('--stdout', metavar='VARIABLE', help='Store stdout in variable')
     @magic.cell_magic
     @magic.needs_local_scope
     def scommand(self, line, cell, local_ns):
-        """Execute command on server."""
+        """Execute commands on server."""
         args = magic_arguments.parse_argstring(self.scommand, line)
         start = timeit.default_timer()
         try:
             while True:
-                stdouts = self._slurm.command(cell.splitlines())
+                stdout = self._slurm.command(cell)
+                clear_output(wait=True)
+                print(stdout)
                 elapsed = timeit.default_timer() - start
                 if args.timeout is not None and elapsed > args.timeout:
-                    print(f'\nsbash terminated after {elapsed:.1f} seconds')
+                    print(f'Timed out after {elapsed:.1f} seconds')
                 elif args.period is not None:
                     time.sleep(args.period)
-                    clear_output(wait=True)
                     continue
                 break
         except KeyboardInterrupt:
             pass
         if args.stdout is not None:
-            local_ns.update({args.stdout: stdouts})
+            local_ns.update({args.stdout: stdout})
 
     @magic_arguments.magic_arguments()
     @magic.cell_magic
     def sftp(self, line, cell):
         """File transfer over secure shell.
 
-        Supported commands: cd, chmod, chown, get, lcd, lls, lmkdir, ln, lpwd, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
-        See interactive commands section of http://man.openbsd.org/sftp for details.
+        Supported commands: cd, chmod, chown, get, lcd, lls, lmkdir, ln, lpwd, lrm, lrmdir, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
+        See http://man.openbsd.org/sftp#INTERACTIVE_COMMANDS for details.
         """
         magic_arguments.parse_argstring(self.sftp, line)
-        lines = [x for x in cell.splitlines() if x.strip() and not x.lstrip().startswith('#')]
-        self._slurm.sftp(lines)
+        self._slurm.sftp(cell)
 
+    @magic_arguments.magic_arguments()
     @magic.line_magic
     def sinteract(self, line):
+        """Interactive shell."""
+        magic_arguments.parse_argstring(self.sinteract, line)
         self._slurm.interact()
 
     @magic_arguments.magic_arguments()
@@ -99,12 +85,15 @@ class IPySlurm(magic.Magics):
     def slogin(self, line):
         """Login to server."""
         args = magic_arguments.parse_argstring(self.slogin, line)
-        self._slurm.login(args.server, args.username, args.password)
-        return self._slurm
+        username = getpass.getuser() if args.username is None else args.username
+        password = getpass.getpass() if args.password is None else args.password
+        self._slurm.login(args.server, username, password)
 
+    @magic_arguments.magic_arguments()
     @magic.line_magic
     def slogout(self, line):
         """Logout of server."""
+        magic_arguments.parse_argstring(self.slogout, line)
         self._slurm.logout()
 
     @magic_arguments.magic_arguments()
