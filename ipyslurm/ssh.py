@@ -1,13 +1,10 @@
-import getpass
 import logging
-import sys
 import threading
 import time
 
 import ipywidgets
 import paramiko
 from IPython.display import display
-from paramiko import AuthenticationException, BadAuthenticationType, SSHException
 
 
 class SSH(paramiko.SSHClient):
