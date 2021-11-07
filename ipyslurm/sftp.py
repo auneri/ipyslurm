@@ -9,6 +9,7 @@ from tqdm.auto import tqdm
 
 from .util import sort_key_natural
 
+PBAR_FORMAT = '{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}{postfix}]'
 PBAR_FUNCTIONS = 'get', 'lrm', 'put', 'rm'
 SFTP_FUNCTIONS = {
     'cd': 'chdir',
@@ -42,7 +43,7 @@ class SFTP:
         self.ftp.close()
 
     def exec_commands(self, commands):
-        pbars = [tqdm(desc=x.split()[0], position=0) if any(x.split()[0] == y for y in PBAR_FUNCTIONS) else None for x in commands]
+        pbars = [tqdm(desc=x.split()[0], bar_format=PBAR_FORMAT, position=0) if any(x.split()[0] == y for y in PBAR_FUNCTIONS) else None for x in commands]
         for command, pbar in zip(commands, pbars):
             argv = shlex.split(command, posix=False)
             function = SFTP_FUNCTIONS.get(argv[0])
@@ -72,6 +73,7 @@ class SFTP:
                         except OSError:
                             pass
                         for filename in filenames:
+                            pbar.set_postfix_str(filename, refresh=False)
                             self.get(f'{dirpath}/{filename}', os.path.join(root, filename), resume)
                             pbar.update()
                         if not recurse:
@@ -80,6 +82,7 @@ class SFTP:
                     pbar.reset(1)
                     self.get(remote, local, resume)
                     pbar.update()
+                pbar.set_postfix_str('', refresh=False)
                 pbar.close()
             elif argv[0] == 'put':
                 recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
@@ -99,6 +102,7 @@ class SFTP:
                         except OSError:
                             pass
                         for filename in filenames:
+                            pbar.set_postfix_str(filename, refresh=False)
                             self.put(os.path.join(dirpath, filename), f'{root}/{filename}', resume)
                             pbar.update()
                         if not recurse:
@@ -107,6 +111,7 @@ class SFTP:
                     pbar.reset(1)
                     self.put(local, remote, resume)
                     pbar.update()
+                pbar.set_postfix_str('', refresh=False)
                 pbar.close()
             elif argv[0] == 'lcd':
                 if len(argv) != 2:
@@ -124,6 +129,7 @@ class SFTP:
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local, topdown=False))), style='danger')
                     for dirpath, dirnames, filenames in os.walk(local, topdown=False):
                         for filename in filenames:
+                            pbar.set_postfix_str(filename, refresh=False)
                             os.remove(os.path.join(dirpath, filename))
                             pbar.update()
                         for dirname in dirnames:
@@ -133,6 +139,7 @@ class SFTP:
                     pbar.reset(1)
                     os.remove(local)
                     pbar.update()
+                pbar.set_postfix_str('', refresh=False)
                 pbar.close()
             elif argv[0] == 'ls':
                 if len(argv) != 2:
@@ -152,6 +159,7 @@ class SFTP:
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(self.walk(remote, topdown=False))), style='danger')
                     for dirpath, dirnames, filenames in self.walk(remote, topdown=False):
                         for filename in filenames:
+                            pbar.set_postfix_str(filename, refresh=False)
                             self.ftp.remove(f'{dirpath}/{filename}')
                             pbar.update()
                         for dirname in dirnames:
@@ -161,6 +169,7 @@ class SFTP:
                     pbar.reset(1)
                     self.ftp.remove(remote)
                     pbar.update()
+                pbar.set_postfix_str('', refresh=False)
                 pbar.close()
             elif argv[0] == 'rmdir':
                 if len(argv) != 2:
