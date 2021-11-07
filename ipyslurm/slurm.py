@@ -1,5 +1,6 @@
 import datetime
 import getpass
+import logging
 import re
 import sys
 from contextlib import contextmanager
@@ -26,13 +27,13 @@ class Slurm:
     def login(self, server, username=None, password=None, **kwargs):
         if username is None:
             username = getpass.getuser()
-        print(f'Logging in to {username}@{server}')
+        logging.getLogger('ipyslurm.slurm').debug(f'Logging in to {username}@{server}')
         self.ssh = ssh.SSH(server, username, password, **kwargs)
         return self
 
     def logout(self):
         if self.ssh is not None:
-            print(f'Logging out of {self.ssh.server}')
+            logging.getLogger('ipyslurm.slurm').debug(f'Logging out of {self.ssh.server}')
             self.ssh = None
 
     def sbatch(self, lines, args=None):
@@ -63,6 +64,7 @@ class Slurm:
         stdouts = self.ssh.exec_command(command_init + command)
         if not stdouts or not stdouts[-1].startswith('Submitted batch job '):
             raise IOError('\n'.join(stdouts))
+        logging.getLogger('ipyslurm.slurm').debug(stdouts[-1])
         return int(stdouts[-1].lstrip('Submitted batch job '))
 
     def script(self, lines, *args, **kwargs):
@@ -84,6 +86,8 @@ class Slurm:
             if command_init:
                 self.ssh.exec_command(command_init)
             stdouts = self.ssh.exec_command(command, *args, **kwargs)
+            for stdout in stdouts:
+                logging.getLogger('ipyslurm.slurm').debug(stdout)
             return '\n'.join(stdouts)
         finally:
             if command_del:

@@ -1,5 +1,6 @@
 import datetime
 import importlib
+import logging
 import os
 import re
 import shlex
@@ -46,6 +47,8 @@ class SFTP:
             command = commands.get(argv[0])
             if command is None:
                 raise SyntaxError(f'"{argv[0]}" is not supported')
+            else:
+                logging.getLogger('ipyslurm.sftp').debug('Executing SFTP command "{argv[0]}"')
             if argv[0] == 'cd':
                 if len(argv) != 2:
                     raise ValueError('cd remote_directory')

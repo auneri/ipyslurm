@@ -1,4 +1,5 @@
 import getpass
+import logging
 import sys
 import threading
 import time
@@ -35,11 +36,18 @@ class SSH(paramiko.SSHClient):
     def exec_command(self, command, block=True, error=True, **kwargs):
         if not isinstance(command, str):
             command = '\n'.join(command)
+        if command:
+            logging.getLogger('ipyslurm.ssh').debug(f'stdin: {command}')
         _, stdout, stderr = super().exec_command(command, **kwargs)
         if block:
-            stdout.channel.recv_exit_status()
+            status = stdout.channel.recv_exit_status()
+            logging.getLogger('ipyslurm.ssh').debug(f'exit status: {status}')
         stdouts = [x.strip('\n') for x in stdout]
         stderrs = [x.strip('\n') for x in stderr]
+        for stdout in stdouts:
+            logging.getLogger('ipyslurm.ssh').debug(f'stdout: {stdout}')
+        for stderr in stderrs:
+            logging.getLogger('ipyslurm.ssh').debug(f'stderr: {stderr}')
         if error:
             if stderrs:
                 raise RuntimeError('Failed to execute command:\nstdin: "{}"\n stderr: "{}"'.format(command, '\n'.join(stderrs)))
