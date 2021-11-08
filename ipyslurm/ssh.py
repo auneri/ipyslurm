@@ -30,9 +30,26 @@ class SSH(paramiko.SSHClient):
         try:
             super().connect(server, username=username, **kwargs)
         except paramiko.AuthenticationException:
-            if password is None:
-                password = getpass.getpass('Password:')
-            self._transport.auth_password(username, password)
+            try:
+                def handler(title, instructions, prompt_list):
+                    if title:
+                        print(title.strip())
+                    if instructions:
+                        print(instructions.strip())
+                    responses = []
+                    for prompt, show_input in prompt_list:
+                        if password is not None and prompt.strip().lower() == 'password:':
+                            responses.append(password)
+                        elif show_input:
+                            responses.append(input(prompt.strip()))
+                        else:
+                            responses.append(getpass.getpass(prompt.strip()))
+                    return responses
+                self._transport.auth_interactive_dumb(username, handler=handler)
+            except paramiko.AuthenticationException:
+                if password is None:
+                    password = getpass.getpass('Password:')
+                self._transport.auth_password(username, password)
         self._transport.set_keepalive(keepalive)
         self.server = server
 
