@@ -24,11 +24,7 @@ class SlurmMagics(magic.Magics):
         job = self._slurm.sbatch(cell, args.args)
         print(f'Submitted batch job {job}')
         if args.tail is not None:
-            try:
-                self._slurm.tail(job, lines=args.tail)
-            except KeyboardInterrupt:
-                self._slurm.scancel(job)
-                print(f'Canceling batch job {job}')
+            self._slurm.tail(job, lines=args.tail)
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('--period', type=float, metavar='SECONDS', help='Repeat execution with a given periodicity')
