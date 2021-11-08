@@ -11,7 +11,7 @@
 
 Install using `pip install ipyslurm` or `conda install -c conda-forge ipyslurm`.
 
-See [tutorial notebook](https://github.com/auneri/ipyslurm/tree/main/examples/tutorial.ipynb) for basic usage.
+See [example notebooks](https://github.com/auneri/ipyslurm/tree/main/examples) for different use cases.
 
 ## Magic commands
 
