@@ -15,21 +15,22 @@ class SlurmMagics(magic.Magics):
         self._slurm = slurm.Slurm()
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('--tail', type=int, metavar='N', help='Block and print last N lines of the log')
-    @magic_arguments.argument('--args', nargs='*', metavar='ARG', help='Additional arguments to sbatch')
+    @magic_arguments.argument('--args', nargs='*', help='Additional arguments to sbatch')
+    @magic_arguments.argument('--job', help='Store job ID in variable', metavar='VARIABLE')
     @magic.cell_magic
-    def sbatch(self, line, cell=''):
+    @magic.needs_local_scope
+    def sbatch(self, line, cell, local_ns):
         """Submit a batch script to Slurm."""
         args = magic_arguments.parse_argstring(self.sbatch, line)
         job = self._slurm.sbatch(cell, args.args)
         print(f'Submitted batch job {job}')
-        if args.tail is not None:
-            self._slurm.tail(job, lines=args.tail)
+        if args.job is not None:
+            local_ns.update({args.job: job})
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('--period', type=float, metavar='SECONDS', help='Repeat execution with a given periodicity')
-    @magic_arguments.argument('--timeout', type=float, metavar='SECONDS', help='Timeout for when used with --period')
-    @magic_arguments.argument('--stdout', metavar='VARIABLE', help='Store stdout in variable')
+    @magic_arguments.argument('--period', type=float, help='Repeat execution with a given periodicity', metavar='SECONDS')
+    @magic_arguments.argument('--timeout', type=float, help='Timeout for when used with --period', metavar='SECONDS')
+    @magic_arguments.argument('--stdout', help='Store stdout in variable', metavar='VARIABLE')
     @magic.cell_magic
     @magic.needs_local_scope
     def scommand(self, line, cell, local_ns):
@@ -72,10 +73,10 @@ class SlurmMagics(magic.Magics):
         self._slurm.interact()
 
     @magic_arguments.magic_arguments()
-    @magic_arguments.argument('--server', help='Address of server')
+    @magic_arguments.argument('--server', help='Address of server', metavar='ADDRESS')
     @magic_arguments.argument('--username', help='Username, interactively requested if not provided')
     @magic_arguments.argument('--password', help='Password, interactively requested if not provided')
-    @magic_arguments.argument('--instance', help='An existing slurm instance')
+    @magic_arguments.argument('--instance', help='An existing slurm instance', metavar='VARIABLE')
     @magic.line_magic
     @magic.needs_local_scope
     def slogin(self, line, local_ns):
@@ -92,6 +93,15 @@ class SlurmMagics(magic.Magics):
         """Logout of server."""
         magic_arguments.parse_argstring(self.slogout, line)
         self._slurm.logout()
+
+    @magic_arguments.magic_arguments()
+    @magic_arguments.argument('job', help='Job ID')
+    @magic_arguments.argument('--lines', default=1, type=int, help='Print last N lines of the log', metavar='N')
+    @magic.line_magic
+    def stail(self, line):
+        """Logout of server."""
+        args = magic_arguments.parse_argstring(self.stail, line)
+        self._slurm.tail(args.job, lines=args.lines)
 
     @magic_arguments.magic_arguments()
     @magic_arguments.argument('filepath', help='Path of file')

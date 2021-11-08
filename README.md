@@ -15,7 +15,7 @@ See [example notebooks](https://github.com/auneri/ipyslurm/tree/main/examples) f
 
 ## Magic commands
 
-Line magics: `sinteract`, `slogin`, `slogout`  
+Line magics: `sinteract`, `slogin`, `slogout`, `stail`  
 Cell magics: `scommand`, `sbatch`, `sftp`, `swritefile`
 
 Use [?](http://ipython.readthedocs.io/en/stable/interactive/tutorial.html#exploring-your-objects) to get help on individual commands.
