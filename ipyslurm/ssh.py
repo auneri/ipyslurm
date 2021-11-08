@@ -1,3 +1,4 @@
+import getpass
 import logging
 import threading
 import time
@@ -26,8 +27,13 @@ class SSH(paramiko.SSHClient):
 
     def connect(self, server, username, password=None, keepalive=30, **kwargs):
         self.close()
-        super().connect(server, username=username, password=password, **kwargs)
-        self.get_transport().set_keepalive(keepalive)
+        try:
+            super().connect(server, username=username, **kwargs)
+        except paramiko.AuthenticationException:
+            if password is None:
+                password = getpass.getpass('Password:')
+            self._transport.auth_password(username, password)
+        self._transport.set_keepalive(keepalive)
         self.server = server
 
     def exec_command(self, command, block=True, error=True, **kwargs):

@@ -1,4 +1,3 @@
-import getpass
 import time
 import timeit
 
@@ -89,9 +88,7 @@ class SlurmMagics(magic.Magics):
         if args.instance is not None:
             self._slurm = local_ns.get(args.instance)
         else:
-            username = getpass.getuser() if args.username is None else args.username
-            password = getpass.getpass() if args.password is None else args.password
-            self._slurm.login(args.server, username, password)
+            self._slurm.login(args.server, args.username, args.password)
 
     @magic_arguments.magic_arguments()
     @magic.line_magic
