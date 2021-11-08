@@ -200,7 +200,7 @@ class SFTP:
             path = path.replace('"', '')
         elif path.startswith("'"):
             path = path.replace("'", '')
-        return os.path.abspath(os.path.expanduser(path))
+        return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
 
     def normalize(self, path):
         if path.startswith('"'):
