@@ -12,7 +12,7 @@ def read(filename):
 
 setuptools.setup(
     name='ipyslurm',
-    description='IPython extension for interacting with the Slurm Workload Manager from Jupyter notebook',
+    description='Python interface to Slurm Workload Manager.',
     long_description=read('README.md'),
     long_description_content_type='text/markdown',
     url='https://auneri.github.io/ipyslurm',
