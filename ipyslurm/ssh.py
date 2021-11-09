@@ -57,23 +57,24 @@ class SSH(paramiko.SSHClient):
         if not isinstance(command, str):
             command = '\n'.join(command)
         if command:
-            logging.getLogger('ipyslurm.ssh').debug(f'stdin: {command}')
+            logging.getLogger('ipyslurm.ssh').debug(f'stdin: "{command}"')
         _, stdout, stderr = super().exec_command(command, **kwargs)
-        if block:
-            status = stdout.channel.recv_exit_status()
-            logging.getLogger('ipyslurm.ssh').debug(f'exit status: {status}')
+        status = stdout.channel.recv_exit_status() if block else -1
         stdouts = [x.strip('\n') for x in stdout]
         stderrs = [x.strip('\n') for x in stderr]
-        for stdout in stdouts:
-            logging.getLogger('ipyslurm.ssh').debug(f'stdout: {stdout}')
-        for stderr in stderrs:
-            logging.getLogger('ipyslurm.ssh').debug(f'stderr: {stderr}')
-        if error:
+        if error and status > 0:
+            message = f'Command returned with exit code {status}:'
+            message += f'\nstdin: "{command}"'
+            if stdouts:
+                message += '\nstdout: "{}"'.format('\n'.join(stdouts))
             if stderrs:
-                raise RuntimeError('Failed to execute command:\nstdin: "{}"\n stderr: "{}"'.format(command, '\n'.join(stderrs)))
-            return stdouts
-        else:
-            return stdouts, stderrs
+                message += '\nstderr: "{}"'.format('\n'.join(stderrs))
+            raise RuntimeError(message)
+        for stdout in stdouts:
+            logging.getLogger('ipyslurm.ssh').debug(f'stdout: "{stdout}"')
+        for stderr in stderrs:
+            logging.getLogger('ipyslurm.ssh').debug(f'stderr: "{stderr}"')
+        return stdouts
 
     def invoke_shell(self, **kwargs):
         channel = super().invoke_shell(**kwargs)
