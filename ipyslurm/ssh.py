@@ -74,7 +74,7 @@ class SSH(paramiko.SSHClient):
             logging.getLogger('ipyslurm.ssh').debug(f'stdout: "{stdout}"')
         for stderr in stderrs:
             logging.getLogger('ipyslurm.ssh').debug(f'stderr: "{stderr}"')
-        return stdouts
+        return stdouts or stderrs
 
     def invoke_shell(self, **kwargs):
         channel = super().invoke_shell(**kwargs)
