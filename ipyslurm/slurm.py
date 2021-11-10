@@ -132,16 +132,18 @@ class Slurm:
             stdouts = []
             for detail in details:
                 stdouts.append(self.ssh.exec_command(f'if test -f "{detail["StdOut"]}"; then tail --lines={lines} {detail["StdOut"]}; fi'))
-            if clear:
-                clear_output(wait=True)
+            output = ''
             for i, detail in enumerate(details):
                 jobname = detail['JobName']
                 if 'ArrayTaskId' in detail:
                     jobname = f'{jobname} [{detail["ArrayTaskId"]}]'
                 for stdout in stdouts[i]:
-                    print(f'{jobname}: {stdout}', flush=True)
+                    output += f'{jobname}: {stdout}\n'
                 if len(stdouts[i]) == 0:
-                    print(f'{jobname}: {detail["JobState"]}', flush=True)
+                    output += f'{jobname}: {detail["JobState"]}\n'
+            if clear:
+                clear_output(wait=True)
+            print(output, end='', flush=True)
             if all(x['JobState'] not in ('COMPLETING', 'CONFIGURING', 'PENDING', 'RUNNING') for x in details):
                 break
 
