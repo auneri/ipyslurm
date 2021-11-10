@@ -44,10 +44,7 @@ class Slurm:
         try:
             if command_init:
                 self.ssh.exec_command(command_init)
-            stdouts = self.ssh.exec_command(command)
-            for stdout in stdouts:
-                logging.getLogger('ipyslurm.slurm').debug(stdout)
-            return '\n'.join(stdouts)
+            return '\n'.join(self.ssh.exec_command(command))
         finally:
             if command_del:
                 self.ssh.exec_command(command_del)
