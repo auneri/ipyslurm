@@ -126,7 +126,7 @@ class SFTP:
                     raise ValueError('lrm [-r] local_file')
                 local = self.lnormalize(argv[1])
                 if recurse and os.path.isdir(local):
-                    pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local, topdown=False))), style='danger')
+                    pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local, topdown=False))))
                     for dirpath, dirnames, filenames in os.walk(local, topdown=False):
                         for filename in filenames:
                             pbar.set_postfix_str(filename, refresh=False)
@@ -156,7 +156,7 @@ class SFTP:
                     raise ValueError('rm [-r] remote_file')
                 remote = self.normalize(argv[1])
                 if recurse and stat.S_ISDIR(self.ftp.stat(remote).st_mode):
-                    pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(self.walk(remote, topdown=False))), style='danger')
+                    pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(self.walk(remote, topdown=False))))
                     for dirpath, dirnames, filenames in self.walk(remote, topdown=False):
                         for filename in filenames:
                             pbar.set_postfix_str(filename, refresh=False)
