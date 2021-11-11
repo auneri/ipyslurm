@@ -66,7 +66,7 @@ class SlurmMagics(magic.Magics):
         """File transfer over secure shell.
 
         Supported commands: cd, chmod, chown, get, lcd, lls, lmkdir, ln, lpwd, lrm, lrmdir, ls, mkdir, put, pwd, rename, rm, rmdir, symlink.
-        See http://man.openbsd.org/sftp#INTERACTIVE_COMMANDS for details.
+        See https://man.openbsd.org/sftp#INTERACTIVE_COMMANDS for details.
         """
         args = magic_arguments.parse_argstring(self.sftp, line)
         slurm = local_ns.get(args.instance, self._slurm)
