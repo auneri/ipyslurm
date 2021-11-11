@@ -5,7 +5,18 @@ and the format of this document is based on [Keep a Changelog](http://keepachang
 
 ## Unreleased
 
-See [individual commits](https://github.com/auneri/ipyslurm/compare/v2.0.0...main) for detailed changes.
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v2.1.0...main) for detailed changes.
+
+## 2.1.0 -- 2021-11-10
+
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v2.0.0...v2.1.0) for detailed changes.
+
+* New example notebooks demonstrating basic and advanced use from Python
+* Separate stail from sbatch to match the Python interface ([link](https://github.com/auneri/ipyslurm/commit/ea8eec53))
+* Allow passing slurm instance to magics ([link](https://github.com/auneri/ipyslurm/commit/807d6bed))
+* Prevent output flicker ([link](https://github.com/auneri/ipyslurm/commit/2bc1752d))
+* Reintroduce login support for MARCC and potentially other clusters ([link](https://github.com/auneri/ipyslurm/commit/2626c4b5))
+* Various fixes for errors introduced in previous release
 
 ## 2.0.0 -- 2021-11-07
 
