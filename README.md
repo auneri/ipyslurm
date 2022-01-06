@@ -2,10 +2,10 @@
 
 Python interface to [Slurm Workload Manager](https://slurm.schedmd.com).
 
-[![pypi](https://img.shields.io/pypi/v/ipyslurm.svg)](https://pypi.org/project/ipyslurm)
-[![conda-forge](https://img.shields.io/conda/vn/conda-forge/ipyslurm.svg)](https://anaconda.org/conda-forge/ipyslurm)
-[![license](https://img.shields.io/github/license/auneri/ipyslurm.svg)](https://github.com/auneri/ipyslurm/blob/main/LICENSE.md)
+[![license](https://img.shields.io/github/license/auneri/ipyslurm)](https://github.com/auneri/ipyslurm/blob/main/LICENSE.md)
 [![build](https://img.shields.io/github/workflow/status/auneri/ipyslurm/ipyslurm)](https://github.com/auneri/ipyslurm/actions)
+[![pypi](https://img.shields.io/pypi/v/ipyslurm)](https://pypi.org/project/ipyslurm)
+[![conda-forge](https://img.shields.io/conda/vn/conda-forge/ipyslurm)](https://anaconda.org/conda-forge/ipyslurm)
 
 ## Getting started
 
