@@ -26,8 +26,8 @@ setuptools.setup(
         'Programming Language :: Python :: 3'],
     packages=setuptools.find_packages(),
     install_requires=[
-        'ipython',
-        'ipywidgets',
-        'paramiko',
-        'tqdm'],
+        'ipython>=7',
+        'ipywidgets>=7',
+        'paramiko>=2.5',
+        'tqdm>=4'],
     python_requires='>=3.7')
