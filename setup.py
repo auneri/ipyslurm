@@ -30,4 +30,4 @@ setuptools.setup(
         'ipywidgets>=7',
         'paramiko>=2.5',
         'tqdm>=4'],
-    python_requires='>=3.7')
+    python_requires='>=3.6')
