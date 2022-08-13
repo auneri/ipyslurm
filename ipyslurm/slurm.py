@@ -20,9 +20,6 @@ class Slurm:
     def __del__(self):
         self.logout()
 
-    def __repr__(self):
-        return f'Logged in to {self.ssh.server}' if self.ssh is not None else 'Not logged in to a server'
-
     def command(self, lines, delete=True):
         self._verify_login()
         if isinstance(lines, str):
@@ -112,6 +109,10 @@ class Slurm:
         details = [re.split(r'\s*(\w+)=', ' '.join(x)) for x in details]
         details = [dict([x[i:i+2] for i in range(1, len(x), 2)]) for x in details]
         return sorted(details, key=lambda x: int(x['ArrayTaskId']) if 'ArrayTaskId' in x and x['ArrayTaskId'].isnumeric() else 0)
+
+    @property
+    def server(self):
+        return self.ssh.server if self.ssh is not None else None
 
     def sftp(self, lines):
         self._verify_login()
