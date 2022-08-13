@@ -66,9 +66,9 @@ class SSH(paramiko.SSHClient):
             message = f'Command returned with exit code {status}:'
             message += f'\nstdin: "{command}"'
             if stdouts:
-                message += '\nstdout: "{}"'.format('\n'.join(stdouts))
+                message += '\nstdout: "{}"'.format('\n'.join(stdouts))  # noqa: FS002
             if stderrs:
-                message += '\nstderr: "{}"'.format('\n'.join(stderrs))
+                message += '\nstderr: "{}"'.format('\n'.join(stderrs))  # noqa: FS002
             raise RuntimeError(message)
         for stdout in stdouts:
             logging.getLogger('ipyslurm.ssh').debug(f'stdout: "{stdout}"')

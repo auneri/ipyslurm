@@ -94,7 +94,7 @@ class Slurm:
             for stdout in stdouts:
                 args = re.sub('\\{(.+?)\\}', stdout, args, count=1)
         if lines:
-            command = ["sbatch {} --wrap='{}'".format(args, '\n'.join(command))]
+            command = ["sbatch {} --wrap='{}'".format(args, '\n'.join(command))]  # noqa: FS002
         else:
             command = [f'sbatch {args}']
         stdouts = self.ssh.exec_command(command_init + command)
