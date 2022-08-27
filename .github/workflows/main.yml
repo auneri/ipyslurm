@@ -18,6 +18,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
+          channel-priority: strict
           python-version: ${{ matrix.python-version }}
       - run: conda env update --name test
       - run: conda run --name test --no-capture-output pytest
