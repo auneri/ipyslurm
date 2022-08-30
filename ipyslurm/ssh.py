@@ -29,7 +29,7 @@ class SSH(paramiko.SSHClient):
         self.close()
         try:
             super().connect(server, username=username, **kwargs)
-        except paramiko.AuthenticationException:
+        except paramiko.SSHException:
             try:
                 def handler(title, instructions, prompt_list):
                     if title:
