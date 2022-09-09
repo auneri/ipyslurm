@@ -7,15 +7,13 @@ dependencies:
   - conda-forge::python>=3.6
   - conda-forge::tqdm>=4
   # test
-  - conda-forge::flake8<5
+  - conda-forge::flake8
   - conda-forge::flake8-builtins
   - conda-forge::flake8-comprehensions
   - conda-forge::flake8-import-order
   - conda-forge::flake8-mutable
   - conda-forge::flake8-quotes
   - conda-forge::pep8-naming
-  - conda-forge::pytest
-  - conda-forge::pytest-flake8
   # pip
   - conda-forge::pip
   - pip:

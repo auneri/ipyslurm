@@ -21,4 +21,4 @@ jobs:
           channel-priority: strict
           python-version: ${{ matrix.python-version }}
       - run: conda env update --name test
-      - run: conda run --name test --no-capture-output pytest
+      - run: conda run --name test --no-capture-output flake8
