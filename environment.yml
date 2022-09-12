@@ -8,11 +8,15 @@ dependencies:
   - conda-forge::tqdm>=4
   # test
   - conda-forge::flake8
+  - conda-forge::flake8-bugbear
   - conda-forge::flake8-builtins
+  - conda-forge::flake8-docstrings
   - conda-forge::flake8-comprehensions
   - conda-forge::flake8-import-order
   - conda-forge::flake8-mutable
   - conda-forge::flake8-quotes
+  - conda-forge::flake8-use-fstring
+  - conda-forge::flake8-use-pathlib
   - conda-forge::pep8-naming
   # pip
   - conda-forge::pip
