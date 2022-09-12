@@ -2,6 +2,7 @@ import datetime
 import importlib
 import logging
 import os
+import pathlib
 import shlex
 import stat
 
@@ -67,14 +68,11 @@ class SFTP:
                 if stat.S_ISDIR(self.ftp.stat(remote).st_mode):
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(self.walk(remote)) if recurse or i == 0))
                     for dirpath, _, filenames in self.walk(remote):
-                        root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
-                        try:
-                            os.mkdir(root)
-                        except OSError:
-                            pass
+                        root = local / dirpath.replace(remote, '')
+                        root.mkdir(exist_ok=True)
                         for filename in filenames:
                             pbar.set_postfix_str(filename, refresh=False)
-                            self.get(f'{dirpath}/{filename}', os.path.join(root, filename), resume)
+                            self.get(f'{dirpath}/{filename}', root / filename, resume)
                             pbar.update()
                         if not recurse:
                             break
@@ -93,7 +91,7 @@ class SFTP:
                 elif len(argv) != 3:
                     raise ValueError('put [-ra] local_file [remote_file]')
                 local, remote = self.lnormalize(argv[1]), self.normalize(argv[2])
-                if os.path.isdir(local):
+                if local.is_dir():
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0))
                     for dirpath, _, filenames in os.walk(local):
                         root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
@@ -125,19 +123,20 @@ class SFTP:
                 if len(argv) != 2:
                     raise ValueError('lrm [-r] local_file')
                 local = self.lnormalize(argv[1])
-                if recurse and os.path.isdir(local):
+                if recurse and local.is_dir():
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local, topdown=False))))
                     for dirpath, dirnames, filenames in os.walk(local, topdown=False):
+                        dirpath = pathlib.Path(dirpath)
                         for filename in filenames:
                             pbar.set_postfix_str(filename, refresh=False)
-                            os.remove(os.path.join(dirpath, filename))
+                            (dirpath / filename).unlink()
                             pbar.update()
                         for dirname in dirnames:
-                            os.rmdir(os.path.join(dirpath, dirname))
-                    os.rmdir(local)
+                            (dirpath / dirname).rmdir()
+                    local.rmdir()
                 else:
                     pbar.reset(1)
-                    os.remove(local)
+                    local.unlink()
                     pbar.update()
                 pbar.set_postfix_str('', refresh=False)
                 pbar.close()
@@ -187,11 +186,11 @@ class SFTP:
             if not resume:
                 raise OSError
             remote_timestamp = datetime.datetime.fromtimestamp(self.ftp.stat(remote).st_mtime)
-            local_timestamp = datetime.datetime.fromtimestamp(os.stat(local)[stat.ST_MTIME])
+            local_timestamp = datetime.datetime.fromtimestamp(local.stat().st_mtime)
             if remote_timestamp > local_timestamp:
                 raise OSError
         except OSError:
-            self.ftp.get(remote, local)
+            self.ftp.get(remote, str(local))
             stats = self.ftp.stat(remote)
             os.utime(local, (stats.st_atime, stats.st_mtime))
 
@@ -200,7 +199,7 @@ class SFTP:
             path = path.replace('"', '')
         elif path.startswith("'"):
             path = path.replace("'", '')
-        return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
+        return pathlib.Path(os.path.expandvars(path)).expanduser().resolve()
 
     def normalize(self, path):
         if path.startswith('"'):
@@ -212,20 +211,20 @@ class SFTP:
             path = f'{cwd}/{path}'
         stdouts = self.ssh.exec_command(f'readlink -f "{path}"')
         if len(stdouts) != 1:
-            raise FileNotFoundError(f'Failed to find {path}')
+            raise FileNotFoundError(f'Failed to find "{path}"')
         return stdouts[0]
 
     def put(self, local, remote, resume=False):
         try:
             if not resume:
                 raise OSError
-            local_timestamp = datetime.datetime.fromtimestamp(os.stat(local)[stat.ST_MTIME])
+            local_timestamp = datetime.datetime.fromtimestamp(local.stat().st_mtime)
             remote_timestamp = datetime.datetime.fromtimestamp(self.ftp.stat(remote).st_mtime)
             if local_timestamp > remote_timestamp:
                 raise OSError
         except OSError:
-            self.ftp.put(local, remote)
-            stats = os.stat(local)
+            self.ftp.put(str(local), remote)
+            stats = local.stat()
             self.ftp.utime(remote, (stats.st_atime, stats.st_mtime))
 
     def walk(self, top, topdown=True, followlinks=False):
