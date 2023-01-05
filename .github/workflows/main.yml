@@ -20,5 +20,5 @@ jobs:
           auto-update-conda: true
           channel-priority: strict
           python-version: ${{ matrix.python-version }}
-      - run: conda env update --name test
+      - run: conda env create --force --name test
       - run: conda run --name test --no-capture-output flake8
