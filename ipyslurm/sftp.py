@@ -69,7 +69,7 @@ class SFTP:
                     for dirpath, _, filenames in self.walk(remote):
                         root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
                         try:
-                            os.mkdir(root)
+                            os.mkdir(root)  # noqa: PL102
                         except OSError:
                             pass
                         for filename in filenames:
@@ -93,7 +93,7 @@ class SFTP:
                 elif len(argv) != 3:
                     raise ValueError('put [-ra] local_file [remote_file]')
                 local, remote = self.lnormalize(argv[1]), self.normalize(argv[2])
-                if os.path.isdir(local):
+                if os.path.isdir(local):  # noqa: PL112
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0))
                     for dirpath, _, filenames in os.walk(local):
                         root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
@@ -125,19 +125,19 @@ class SFTP:
                 if len(argv) != 2:
                     raise ValueError('lrm [-r] local_file')
                 local = self.lnormalize(argv[1])
-                if recurse and os.path.isdir(local):
+                if recurse and os.path.isdir(local):  # noqa: PL112
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local, topdown=False))))
                     for dirpath, dirnames, filenames in os.walk(local, topdown=False):
                         for filename in filenames:
                             pbar.set_postfix_str(filename, refresh=False)
-                            os.remove(os.path.join(dirpath, filename))
+                            os.remove(os.path.join(dirpath, filename))  # noqa: PL107
                             pbar.update()
                         for dirname in dirnames:
-                            os.rmdir(os.path.join(dirpath, dirname))
-                    os.rmdir(local)
+                            os.rmdir(os.path.join(dirpath, dirname))  # noqa: PL106
+                    os.rmdir(local)  # noqa: PL106
                 else:
                     pbar.reset(1)
-                    os.remove(local)
+                    os.remove(local)  # noqa: PL107
                     pbar.update()
                 pbar.set_postfix_str('', refresh=False)
                 pbar.close()
@@ -200,7 +200,7 @@ class SFTP:
             path = path.replace('"', '')
         elif path.startswith("'"):
             path = path.replace("'", '')
-        return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
+        return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))  # noqa: PL100
 
     def normalize(self, path):
         if path.startswith('"'):
@@ -225,7 +225,7 @@ class SFTP:
                 raise OSError
         except OSError:
             self.ftp.put(local, remote)
-            stats = os.stat(local)
+            stats = os.stat(local)  # noqa: PL116
             self.ftp.utime(remote, (stats.st_atime, stats.st_mtime))
 
     def walk(self, top, topdown=True, followlinks=False):
