@@ -12,7 +12,6 @@ class SSH(paramiko.SSHClient):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.load_system_host_keys()
         self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.server = None
         if len(args) or len(kwargs):
