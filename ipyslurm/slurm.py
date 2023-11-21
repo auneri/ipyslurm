@@ -132,16 +132,16 @@ class Slurm:
             details = self.scontrol_show_job(job)
             stdouts = []
             for detail in details:
-                stdouts.append(self.ssh.exec_command(f'if test -f "{detail["StdOut"]}"; then tr "\\r" "\\n" < {detail["StdOut"]} | tail --lines={lines}; fi'))
+                stdouts.append(self.ssh.exec_command(f'if test -f "{detail["StdOut"]}"; then tr "\\r" "\\n" < {detail["StdOut"]} | tail --lines={lines}; fi'))  # noqa: Q000
             output = ''
             for i, detail in enumerate(details):
                 jobname = detail['JobName']
                 if 'ArrayTaskId' in detail:
-                    jobname = f'{jobname} [{detail["ArrayTaskId"]}]'
+                    jobname = f'{jobname} [{detail["ArrayTaskId"]}]'  # noqa: Q000
                 for stdout in stdouts[i]:
                     output += f'{jobname}: {stdout}\n'
                 if len(stdouts[i]) == 0:
-                    output += f'{jobname}: {detail["JobState"]}\n'
+                    output += f'{jobname}: {detail["JobState"]}\n'  # noqa: Q000
             if clear:
                 clear_output(wait=True)
             print(output, end='', flush=True)
