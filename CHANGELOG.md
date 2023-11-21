@@ -5,7 +5,17 @@ and the format of this document is based on [Keep a Changelog](http://keepachang
 
 ## Unreleased
 
-See [individual commits](https://github.com/auneri/ipyslurm/compare/v2.1.0...main) for detailed changes.
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v2.2.0...main) for detailed changes.
+
+## 2.2.0 -- 2023-11-21
+
+* Option to repeat tail output, true by default.
+* Replace carriage return with newline in tail.
+* Make ipywidgets a a soft dependency.
+* Various improvements to the CI configuration.
+* Specify minimum dependency versions, use conda-forge.
+* Do not overload repr, provide slurm.server as a property.
+* Handle paramiko SSH exceptions, do not load system SSH keys.
 
 ## 2.1.0 -- 2021-11-10
 
