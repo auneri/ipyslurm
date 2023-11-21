@@ -3,7 +3,6 @@ import logging
 import threading
 import time
 
-import ipywidgets
 import paramiko
 from IPython.display import display
 
@@ -76,6 +75,7 @@ class SSH(paramiko.SSHClient):
         return stdouts or stderrs
 
     def invoke_shell(self, **kwargs):
+        import ipywidgets
         channel = super().invoke_shell(**kwargs)
         output = ipywidgets.Output()
         stdin = ipywidgets.widgets.Text(placeholder='Enter shell command')

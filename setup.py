@@ -27,7 +27,6 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         'ipython>=7',
-        'ipywidgets>=7',
         'paramiko>=2.5',
         'tqdm>=4'],
     python_requires='>=3.6')

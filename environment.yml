@@ -2,10 +2,11 @@ channels:
   - conda-forge
 dependencies:
   - conda-forge::ipython>=7
-  - conda-forge::ipywidgets>=7
   - conda-forge::paramiko>=2.5
   - conda-forge::python>=3.6
   - conda-forge::tqdm>=4
+  # optional
+  - conda-forge::ipywidgets>=7
   # test
   - conda-forge::flake8
   - conda-forge::flake8-bugbear
