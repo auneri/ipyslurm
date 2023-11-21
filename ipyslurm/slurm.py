@@ -127,7 +127,7 @@ class Slurm:
             output_format = '%.20j %.15i %.7M %.10l %.7u %.9P %.8T %R'
         print(self.command(f'squeue --format "{output_format}"'))
 
-    def tail(self, job, lines=1, clear=True):
+    def tail(self, job, lines=1, repeat=True, clear=True):
         while True:
             details = self.scontrol_show_job(job)
             stdouts = []
@@ -145,7 +145,7 @@ class Slurm:
             if clear:
                 clear_output(wait=True)
             print(output, end='', flush=True)
-            if all(x['JobState'] not in ('COMPLETING', 'CONFIGURING', 'PENDING', 'RUNNING') for x in details):
+            if not repeat or all(x['JobState'] not in ('COMPLETING', 'CONFIGURING', 'PENDING', 'RUNNING') for x in details):
                 break
 
     def writefile(self, filepath, lines, append=False):
