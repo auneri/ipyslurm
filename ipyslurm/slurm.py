@@ -132,7 +132,7 @@ class Slurm:
             details = self.scontrol_show_job(job)
             stdouts = []
             for detail in details:
-                stdouts.append(self.ssh.exec_command(f'if test -f "{detail["StdOut"]}"; then tail --lines={lines} {detail["StdOut"]}; fi'))
+                stdouts.append(self.ssh.exec_command(f'if test -f "{detail["StdOut"]}"; then tr "\\r" "\\n" < {detail["StdOut"]} | tail --lines={lines}; fi'))
             output = ''
             for i, detail in enumerate(details):
                 jobname = detail['JobName']
