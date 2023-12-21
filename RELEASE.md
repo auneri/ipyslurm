@@ -7,7 +7,7 @@
 
 2. Upload new package to PyPI
 
-    ```bash
+    ```shell
     git clone --depth 1 --branch vX.X.X https://github.com/auneri/ipyslurm src
     conda create --yes --prefix ./env python=3.10 setuptools
     conda activate ./env
