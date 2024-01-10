@@ -125,7 +125,9 @@ class SFTP:
                 if len(argv) != 2:
                     raise ValueError('lrm [-r] local_file')
                 local = self.lnormalize(argv[1])
-                if recurse and os.path.isdir(local):  # noqa: PL112
+                if not os.path.exists(local):
+                    pass
+                elif recurse and os.path.isdir(local):  # noqa: PL112
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local, topdown=False))))
                     for dirpath, dirnames, filenames in os.walk(local, topdown=False):
                         for filename in filenames:
@@ -155,7 +157,14 @@ class SFTP:
                 if len(argv) != 2:
                     raise ValueError('rm [-r] remote_file')
                 remote = self.normalize(argv[1])
-                if recurse and stat.S_ISDIR(self.ftp.stat(remote).st_mode):
+                try:
+                    self.ftp.stat(remote)
+                    exists = True
+                except FileNotFoundError:
+                    exists = False
+                if not exists:
+                    pass
+                elif recurse and stat.S_ISDIR(self.ftp.stat(remote).st_mode):
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(self.walk(remote, topdown=False))))
                     for dirpath, dirnames, filenames in self.walk(remote, topdown=False):
                         for filename in filenames:
