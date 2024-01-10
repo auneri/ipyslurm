@@ -1,4 +1,3 @@
-import datetime
 import itertools
 import logging
 import re
@@ -20,31 +19,21 @@ class Slurm:
     def __del__(self):
         self.logout()
 
-    def command(self, lines, delete=True):
+    def command(self, lines):
         self._verify_login()
         if isinstance(lines, str):
             lines = lines.splitlines()
         shebangs = [i for i, x in enumerate(lines) if x.startswith('#!')]
         command = lines[:shebangs[0]] if shebangs else lines
         command_init = []
-        command_del = []
         for i, j in zip(shebangs, shebangs[1:] + [None]):
-            timestamp = datetime.datetime.now().strftime(f'%Y%m%d_%H%M%S_{i}')
             script = '\n'.join(x.replace("'", "'\"'\"'") for x in lines[slice(i, j)])
             command_init += [
-                'mkdir -p ~/.ipyslurm',
-                f"echo '{script}' > ~/.ipyslurm/script_{timestamp}",
-                f'chmod +x ~/.ipyslurm/script_{timestamp}']
-            command += [f'~/.ipyslurm/script_{timestamp}']
-            if delete:
-                command_del += [f'rm ~/.ipyslurm/script_{timestamp}']
-        try:
-            if command_init:
-                self.ssh.exec_command(command_init)
-            return '\n'.join(self.ssh.exec_command(command))
-        finally:
-            if command_del:
-                self.ssh.exec_command(command_del)
+                'SCRIPT=$(mktemp)',
+                f"echo '{script}' > $SCRIPT",
+                'chmod +x $SCRIPT']
+            command += ['$SCRIPT']
+        return '\n'.join(self.ssh.exec_command(command_init + command))
 
     def disk_usage(self, directory='~', depth=0):
         print(self.command(f'df --human-readable {directory}'))
@@ -76,16 +65,15 @@ class Slurm:
         lines = [x.replace("'", "'\"'\"'") for x in lines if not x.startswith('#SBATCH')]
         shebangs = [i for i, x in enumerate(lines) if x.startswith('#!')]
         command = lines[:shebangs[0]] if shebangs else lines
-        command_init = []
         for i, j in zip(shebangs, shebangs[1:] + [None]):
-            timestamp = datetime.datetime.now().strftime(f'%Y%m%d_%H%M%S_{i}')
             script = '\n'.join(lines[slice(i, j)])
-            command_init += [
-                'mkdir -p ~/.ipyslurm',
-                f"echo '{script}' > ~/.ipyslurm/sbatch_{timestamp}",
-                f'chmod +x ~/.ipyslurm/sbatch_{timestamp}']
-            command += [f'~/.ipyslurm/sbatch_{timestamp}']
-        command_args = [match.group(1) for match in re.finditer('\\{(.+?)\\}', args)]
+            command_init = [
+                'SCRIPT=$(mktemp)',
+                f"echo '{script}' > $SCRIPT",
+                'chmod +x $SCRIPT',
+                'echo $SCRIPT']
+            command += self.ssh.exec_command(command_init)
+        command_args = [x.group(1) for x in re.finditer('\\{(.+?)\\}', args)]
         if command_args:
             stdouts = self.ssh.exec_command(command_args)
             for stdout in stdouts:
@@ -94,7 +82,7 @@ class Slurm:
             command = ["sbatch {} --wrap='{}'".format(args, '\n'.join(command))]  # noqa: FS002
         else:
             command = [f'sbatch {args}']
-        stdouts = self.ssh.exec_command(command_init + command)
+        stdouts = self.ssh.exec_command(command)
         if not stdouts or not stdouts[-1].startswith('Submitted batch job '):
             raise RuntimeError('\n'.join(stdouts))
         logging.getLogger('ipyslurm.slurm').debug(stdouts[-1])
