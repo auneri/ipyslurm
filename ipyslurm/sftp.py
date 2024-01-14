@@ -125,7 +125,7 @@ class SFTP:
                 if len(argv) != 2:
                     raise ValueError('lrm [-r] local_file')
                 local = self.lnormalize(argv[1])
-                if not os.path.exists(local):
+                if not os.path.exists(local):  # noqa: PL110
                     pass
                 elif recurse and os.path.isdir(local):  # noqa: PL112
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local, topdown=False))))
