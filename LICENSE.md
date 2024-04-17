@@ -1,5 +1,4 @@
-
-The MIT License (MIT)
+# MIT License
 
 Copyright (c) 2017 Ali Uneri
 
