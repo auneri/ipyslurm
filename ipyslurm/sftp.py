@@ -2,6 +2,7 @@ import datetime
 import importlib
 import logging
 import os
+import pathlib
 import shlex
 import stat
 
@@ -68,10 +69,7 @@ class SFTP:
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(self.walk(remote)) if recurse or i == 0))
                     for dirpath, _, filenames in self.walk(remote):
                         root = local + os.path.sep.join(dirpath.replace(remote, '').split('/'))
-                        try:
-                            os.mkdir(root)  # noqa: PL102
-                        except OSError:
-                            pass
+                        os.makedirs(root, exist_ok=True)  # noqa: PL103
                         for filename in filenames:
                             pbar.set_postfix_str(filename, refresh=False)
                             self.get(f'{dirpath}/{filename}', os.path.join(root, filename), resume)
@@ -97,10 +95,7 @@ class SFTP:
                     pbar.reset(sum(len(filenames) for i, (_, _, filenames) in enumerate(os.walk(local)) if recurse or i == 0))
                     for dirpath, _, filenames in os.walk(local):
                         root = remote + '/'.join(dirpath.replace(local, '').split(os.path.sep))
-                        try:
-                            self.ftp.mkdir(root)
-                        except OSError:
-                            pass
+                        self.mkdirs(root)
                         for filename in filenames:
                             pbar.set_postfix_str(filename, refresh=False)
                             self.put(os.path.join(dirpath, filename), f'{root}/{filename}', resume)
@@ -211,6 +206,16 @@ class SFTP:
             path = path.replace("'", '')
         return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))  # noqa: PL100
 
+    def mkdirs(self, path):
+        path = pathlib.PurePosixPath(path)
+        dirpath = pathlib.PurePosixPath(path.parts[0])
+        for part in path.parts:
+            dirpath = dirpath / part
+            try:
+                self.ftp.mkdir(str(dirpath))
+            except OSError:
+                pass
+
     def normalize(self, path):
         if path.startswith('"'):
             path = path.replace('"', '')
@@ -219,7 +224,7 @@ class SFTP:
         cwd = self.ftp.getcwd()
         if cwd is not None:
             path = f'{cwd}/{path}'
-        stdouts = self.ssh.exec_command(f'readlink -f "{path}"')
+        stdouts = self.ssh.exec_command(f'readlink -m "{path}"')
         if len(stdouts) != 1:
             raise FileNotFoundError(f'Failed to find {path}')
         return stdouts[0]
