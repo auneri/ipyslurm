@@ -115,11 +115,18 @@ class Slurm:
         print(self.command(f'squeue --format "{output_format}"'))
 
     def tail(self, job, lines=1, repeat=True, clear=True):
+        separator = '<<< ipyslurm job output separator >>>'
         while True:
             details = self.scontrol_show_job(job)
-            stdouts = []
-            for detail in details:
-                stdouts.append(self.ssh.exec_command(f'if test -f "{detail["StdOut"]}"; then tr "\\r" "\\n" < {detail["StdOut"]} | tail --lines={lines}; fi'))  # noqa: Q000
+            stdouts = self.ssh.exec_command('\n'.join(f"""
+if [ -f "{x["StdOut"]}" ]; then
+    output=$(tail -n {lines} "{x["StdOut"]}" | tr "\\r" "\\n" | tail -n {lines})
+    echo -n "$output"
+    echo
+fi
+echo "{separator}"
+""" for x in details))
+            stdouts = util.split_list(stdouts, separator)[:-1]
             output = ''
             for i, detail in enumerate(details):
                 jobname = detail['JobName']
@@ -127,7 +134,7 @@ class Slurm:
                     jobname = f'{jobname} [{detail["ArrayTaskId"]}]'  # noqa: Q000
                 for stdout in stdouts[i]:
                     output += f'{jobname}: {stdout}\n'
-                if len(stdouts[i]) == 0:
+                if not stdouts[i]:
                     output += f'{jobname}: {detail["JobState"]}\n'  # noqa: Q000
             if clear:
                 clear_output(wait=True)
