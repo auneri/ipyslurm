@@ -1,4 +1,3 @@
-import itertools
 import logging
 import re
 import shlex
@@ -6,7 +5,7 @@ import shlex
 from IPython.display import clear_output
 from paramiko import AuthenticationException
 
-from . import sftp, ssh
+from . import sftp, ssh, util
 
 
 class Slurm:
@@ -93,7 +92,7 @@ class Slurm:
 
     def scontrol_show_job(self, job):
         stdouts = self.ssh.exec_command(f'scontrol show job {job} --details')
-        details = [list(x) for _, x in itertools.groupby(stdouts, key=''.__ne__)][::2]
+        details = util.split_list(stdouts, separator='')[:-1]
         details = [re.split(r'\s*(\w+)=', ' '.join(x)) for x in details]
         details = [dict([x[i:i+2] for i in range(1, len(x), 2)]) for x in details]
         return sorted(details, key=lambda x: int(x['ArrayTaskId']) if 'ArrayTaskId' in x and x['ArrayTaskId'].isnumeric() else 0)
