@@ -129,6 +129,8 @@ echo "{separator}"
             stdouts = util.split_list(stdouts, separator)[:-1]
             output = ''
             for i, detail in enumerate(details):
+                if detail['JobState'] not in ('PENDING', 'RUNNING'):
+                    continue
                 jobname = detail['JobName']
                 if 'ArrayTaskId' in detail:
                     jobname = f'{jobname} [{detail["ArrayTaskId"]}]'  # noqa: Q000
@@ -139,7 +141,7 @@ echo "{separator}"
             if clear:
                 clear_output(wait=True)
             print(output, end='', flush=True)
-            if not repeat or all(x['JobState'] not in ('COMPLETING', 'CONFIGURING', 'PENDING', 'RUNNING') for x in details):
+            if not repeat or all(x['JobState'] not in ('PENDING', 'RUNNING') for x in details):
                 break
 
     def writefile(self, filepath, lines, append=False):
