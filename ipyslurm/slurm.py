@@ -118,14 +118,18 @@ class Slurm:
         separator = '<<< ipyslurm job output separator >>>'
         while True:
             details = self.scontrol_show_job(job)
-            stdouts = self.ssh.exec_command('\n'.join(f"""
-if [ -f "{x["StdOut"]}" ]; then
-    output=$(tail -n {lines} "{x["StdOut"]}" | tr "\\r" "\\n" | tail -n {lines})
-    echo -n "$output"
-    echo
-fi
-echo "{separator}"
-""" for x in details))
+            filepaths = ' '.join(f'{x["StdOut"]}' for x in details)
+            stdouts = self.ssh.exec_command(f"""
+filepaths="{filepaths}"
+for filepath in $filepaths; do
+    if [ -f "$filepath" ]; then
+        output=$(tail -n {lines} "$filepath" | tr "\\r" "\\n" | tail -n {lines})
+        echo -n "$output"
+        echo
+    fi
+    echo "{separator}"
+done
+""")
             stdouts = util.split_list(stdouts, separator)[:-1]
             output = ''
             for i, detail in enumerate(details):
