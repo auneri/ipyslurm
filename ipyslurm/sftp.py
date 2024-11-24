@@ -11,7 +11,11 @@ from tqdm.auto import tqdm
 from .util import sort_key_natural
 
 PBAR_FORMAT = '{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}{postfix}]'
-PBAR_FUNCTIONS = 'get', 'lrm', 'put', 'rm'
+PBAR_FUNCTIONS = (
+    'get',
+    'lrm',
+    'put',
+    'rm')
 SFTP_FUNCTIONS = {
     'cd': 'chdir',
     'chmod': 'chmod',
@@ -52,10 +56,12 @@ class SFTP:
                 raise NotImplementedError(f'"{argv[0]}" is not supported')
             else:
                 logging.getLogger('ipyslurm.sftp').debug('Executing SFTP command "{argv[0]}"')
+
             if argv[0] == 'cd':
                 if len(argv) != 2:
                     raise ValueError('cd remote_directory')
                 output = getattr(self.ftp, function)(self.normalize(argv[1]))
+
             elif argv[0] == 'get':
                 recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
                 resume = bool([x for x in argv if x.startswith('-') and 'a' in x])
@@ -82,6 +88,7 @@ class SFTP:
                     pbar.update()
                 pbar.set_postfix_str('', refresh=False)
                 pbar.close()
+
             elif argv[0] == 'put':
                 recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
                 resume = bool([x for x in argv if x.startswith('-') and 'a' in x])
@@ -108,12 +115,15 @@ class SFTP:
                     pbar.update()
                 pbar.set_postfix_str('', refresh=False)
                 pbar.close()
+
             elif argv[0] == 'lcd':
                 if len(argv) != 2:
                     raise ValueError('lcd local_directory')
                 output = getattr(importlib.import_module(function.rsplit('.', 1)[0]), function.rsplit('.', 1)[1])(self.lnormalize(argv[1]))
+
             elif argv[0] in ('lls', 'lmkdir', 'lpwd', 'lrmdir'):
                 output = getattr(importlib.import_module(function.rsplit('.', 1)[0]), function.rsplit('.', 1)[1])(*argv[1:])
+
             elif argv[0] == 'lrm':
                 recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
                 argv = [x for x in argv if not x.startswith('-')]
@@ -138,14 +148,17 @@ class SFTP:
                     pbar.update()
                 pbar.set_postfix_str('', refresh=False)
                 pbar.close()
+
             elif argv[0] == 'ls':
                 if len(argv) != 2:
                     raise ValueError('ls remote_directory')
                 output = getattr(self.ftp, function)(self.normalize(argv[1]))
+
             elif argv[0] == 'mkdir':
                 if len(argv) != 2:
                     raise ValueError('mkdir remote_directory')
                 output = getattr(self.ftp, function)(self.normalize(argv[1]))
+
             elif argv[0] == 'rm':
                 recurse = bool([x for x in argv if x.startswith('-') and 'r' in x])
                 argv = [x for x in argv if not x.startswith('-')]
@@ -175,14 +188,18 @@ class SFTP:
                     pbar.update()
                 pbar.set_postfix_str('', refresh=False)
                 pbar.close()
+
             elif argv[0] == 'rmdir':
                 if len(argv) != 2:
                     raise ValueError('rmdir remote_directory')
                 output = getattr(self.ftp, function)(self.normalize(argv[1]))
+
             else:  # 'chmod', 'chown', 'ln', 'pwd', 'rename', 'symlink'
                 output = getattr(self.ftp, function)(*argv[1:])
+
             if argv[0] in ('pwd', 'lpwd'):
                 print(output)
+
             elif argv[0] in ('ls', 'lls'):
                 print('\n'.join(sorted(output, key=sort_key_natural)))
 
