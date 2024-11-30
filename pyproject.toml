@@ -35,6 +35,8 @@ flake8 = [
     "flake8-use-fstring",
     "flake8-use-pathlib",
     "pep8-naming"]
+interactive = [
+    "ipywidgets>=7"]
 
 [project.urls]
 Homepage = "https://auneri.github.io/ipyslurm"
