@@ -1,0 +1,64 @@
+[build-system]
+requires = [
+    "setuptools>=64",
+    "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ipyslurm"
+version = "2.2.0"
+description = "Python interface to Slurm Workload Manager."
+readme = {file = "README.md", content-type = "text/markdown"}
+authors = [{name = "Ali Uneri"}]
+classifiers = [
+    "Framework :: IPython",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3"]
+dependencies = [
+    "ipython>=7",
+    "paramiko>=2.5",
+    "tqdm>=4"]
+requires-python = ">=3.8"
+
+[project.optional-dependencies]
+flake8 = [
+    "flake8",
+    "flake8-bugbear",
+    "flake8-builtins",
+    "flake8-comprehensions",
+    "flake8-docstrings",
+    "flake8-import-order",
+    "flake8-mutable",
+    "flake8-pyproject",
+    "flake8-quotes",
+    "flake8-use-fstring",
+    "flake8-use-pathlib",
+    "pep8-naming"]
+
+[project.urls]
+Homepage = "https://auneri.github.io/ipyslurm"
+Repository = "https://github.com/auneri/ipyslurm"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.flake8]
+extend-ignore = [
+    "D100", "D101", "D102", "D103", "D104", "D105", "D107",
+    "E501"]
+import-order-style = "smarkets"
+
+[tool.pycodestyle]
+ignore = ["E501"]
+# E501: line too long (> 79 characters)
+
+[tool.pydocstyle]
+add-ignore = ["D100", "D101", "D102", "D103", "D104", "D105", "D107"]
+# D100: missing docstring in public module
+# D101: missing docstring in public class
+# D102: missing docstring in public method
+# D103: missing docstring in public function
+# D104: missing docstring in public package
+# D105: missing docstring in magic method
+# D107: missing docstring in __init__
