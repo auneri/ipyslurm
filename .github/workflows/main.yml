@@ -11,14 +11,15 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.9", "3.10", "3.11"]
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
         with:
+          activate-environment: env
           auto-update-conda: true
-          channel-priority: strict
           python-version: ${{ matrix.python-version }}
-      - run: conda env create --force --name test
-      - run: conda run --name test --no-capture-output flake8
+      - run: |
+          python -m pip install .[flake8]
+          python -m flake8 .
