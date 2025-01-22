@@ -131,6 +131,8 @@ for filepath in $filepaths; do
 done
 """)
             stdouts = util.split_list(stdouts, separator)[:-1]
+            if lines == 0:
+                stdouts = [[]] * len(stdouts)
             output = ''
             for i, detail in enumerate(details):
                 if detail['JobState'] not in ('PENDING', 'RUNNING'):
