@@ -5,7 +5,19 @@ and the format of this document is based on [Keep a Changelog](http://keepachang
 
 ## Unreleased
 
-See [individual commits](https://github.com/auneri/ipyslurm/compare/v2.2.0...main) for detailed changes.
+See [individual commits](https://github.com/auneri/ipyslurm/compare/v2.3.0...main) for detailed changes.
+
+## 2.3.0 -- 2025-01-22
+
+* Update packaging to use pyproject.toml.
+* Deploy project using GitHub actions.
+* Make ipywidgets a soft dependency.
+* Explicitly use text progress bars.
+* Show output only for pending or running jobs.
+* Speedup tail to support large job arrays.
+* Create directory structures as needed.
+* Use temporary files instead of ~/.ipylurm.
+* Prevent rm/lrm errors if path does not exist.
 
 ## 2.2.0 -- 2023-11-21
 
