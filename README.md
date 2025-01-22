@@ -19,3 +19,10 @@ Line magics: `sinteract`, `slogin`, `slogout`, `stail`
 Cell magics: `scommand`, `sbatch`, `sftp`, `swritefile`
 
 Use [?](http://ipython.readthedocs.io/en/stable/interactive/tutorial.html#exploring-your-objects) to get help on individual commands.
+
+## Releasing a new version
+
+1. Update `project.version` in `pyproject.toml` and `CHANGELOG` with commit message "Release vX.X.X".
+2. Add tag vX.X.X with message "Release vX.X.X".
+3. Push the tag and create a new release on [ipyslurm](https://github.com/auneri/ipyslurm).
+4. Merge the auto-generated pull request on [ipyslurm-feedstock](https://github.com/conda-forge/ipyslurm-feedstock).
