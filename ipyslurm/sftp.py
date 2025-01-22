@@ -6,7 +6,7 @@ import pathlib
 import shlex
 import stat
 
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 from .util import sort_key_natural
 
