@@ -144,9 +144,10 @@ done
                     output += f'{jobname}: {stdout}\n'
                 if not stdouts[i]:
                     output += f'{jobname}: {detail["JobState"]}\n'  # noqa: Q000
-            if clear:
-                clear_output(wait=True)
-            print(output, end='', flush=True)
+            if lines is not None:
+                if clear:
+                    clear_output(wait=True)
+                print(output, end='', flush=True)
             if not repeat or all(x['JobState'] not in ('PENDING', 'RUNNING') for x in details):
                 break
 
